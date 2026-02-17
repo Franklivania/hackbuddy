@@ -3,6 +3,7 @@ package mailer
 import (
 	"fmt"
 	"hackbuddy-backend/config"
+	"log"
 	"net/smtp"
 )
 
@@ -24,6 +25,12 @@ func (m *SMTPMailer) Send(to []string, subject string, body string) error {
 	smtpHost := m.cfg.SMTPServer
 	smtpPort := fmt.Sprintf("%d", m.cfg.SMTPPort)
 
+	if from == "" || password == "" || smtpHost == "" {
+		err := fmt.Errorf("SMTP not configured: set SMTP_USER, SMTP_PASSWORD, SMTP_SERVER in env")
+		log.Printf("[mailer] %v", err)
+		return err
+	}
+
 	auth := smtp.PlainAuth("", from, password, smtpHost)
 
 	fromHeader := "HackBuddy <" + from + ">"
@@ -34,5 +41,9 @@ func (m *SMTPMailer) Send(to []string, subject string, body string) error {
 		body + "\r\n")
 
 	addr := smtpHost + ":" + smtpPort
-	return smtp.SendMail(addr, auth, from, to, msg)
+	if err := smtp.SendMail(addr, auth, from, to, msg); err != nil {
+		log.Printf("[mailer] send failed (to=%s): %v", to[0], err)
+		return err
+	}
+	return nil
 }

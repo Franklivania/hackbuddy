@@ -58,6 +58,11 @@ func main() {
 	// 1. Load Config
 	cfg := config.LoadConfig()
 
+	// Disable Gin debug mode in production (no debug logs, no stack traces in responses)
+	if cfg.AppEnv == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// Set Swagger host from BackendURL so "Try it out" on Render uses the deployed URL (avoids CORS/failed fetch)
 	if cfg.BackendURL != "" {
 		if u, err := url.Parse(cfg.BackendURL); err == nil {
