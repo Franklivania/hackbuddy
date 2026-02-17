@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"hackbuddy-backend/config"
+	"hackbuddy-backend/docs/swagger"
 	"hackbuddy-backend/db"
 	"hackbuddy-backend/domains/admin"
 	"hackbuddy-backend/domains/analysis"
@@ -42,7 +44,7 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host localhost:8080
+// @host https://hackbuddy-im66.onrender.com
 // @BasePath /api/v1
 
 // @securityDefinitions.apikey BearerAuth
@@ -55,6 +57,16 @@ const BasePath = "/api/v1"
 func main() {
 	// 1. Load Config
 	cfg := config.LoadConfig()
+
+	// Set Swagger host from BackendURL so "Try it out" on Render uses the deployed URL (avoids CORS/failed fetch)
+	if cfg.BackendURL != "" {
+		if u, err := url.Parse(cfg.BackendURL); err == nil {
+			swagger.SwaggerInfo.Host = u.Host
+			if u.Scheme != "" {
+				swagger.SwaggerInfo.Schemes = []string{u.Scheme}
+			}
+		}
+	}
 
 	// 2. Init Infrastructure
 	logger.InitLogger()

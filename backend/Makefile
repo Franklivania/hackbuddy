@@ -1,7 +1,13 @@
-.PHONY: all all-local all-prod build run test swagger docker-build docker-up docker-down up-local down-local up-prod down-prod
+.PHONY: all all-local all-prod build run lint test swagger docker-build docker-up docker-down up-local down-local up-prod down-prod
 
 # Environment-agnostic: docs + tests only (no docker)
-all: swagger test
+all: lint test swagger
+
+lint:
+	golangci-lint run ./...
+
+test:
+	go test -v ./... -cover
 
 all-local: swagger test up-local
 
@@ -12,9 +18,6 @@ build:
 
 run:
 	go run ./cmd/main.go
-
-test:
-	go test -v ./... -cover
 
 swagger:
 	swag init -g cmd/main.go -o docs/swagger -d . --parseDependency --parseInternal
