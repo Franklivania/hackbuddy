@@ -69,6 +69,11 @@ func (m *MockMailer) Send(to []string, subject string, body string) error {
 	return args.Error(0)
 }
 
+func (m *MockMailer) SendOTPVerification(to string, code string) error {
+	args := m.Called(to, code)
+	return args.Error(0)
+}
+
 func TestRegister(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockMailer := new(MockMailer)
@@ -87,8 +92,7 @@ func TestRegister(t *testing.T) {
 	mockRepo.On("CreateUser", mock.AnythingOfType("*auth.User")).Return(nil)
 	// Expect StoreVerificationCode
 	mockRepo.On("StoreVerificationCode", input.Email, mock.AnythingOfType("string")).Return(nil)
-	// Expect Send email
-	mockMailer.On("Send", []string{input.Email}, mock.Anything, mock.Anything).Return(nil)
+	mockMailer.On("SendOTPVerification", input.Email, mock.AnythingOfType("string")).Return(nil)
 
 	err := service.Register(input)
 	assert.NoError(t, err)

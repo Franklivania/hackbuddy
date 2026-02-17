@@ -60,8 +60,7 @@ func (s *service) Register(input RegisterInput) error {
 		return err
 	}
 
-	// Send email
-	go s.mailer.Send([]string{user.Email}, "Verify your email", "Your code is: "+code)
+	go s.mailer.SendOTPVerification(user.Email, code)
 
 	return nil
 }
@@ -129,7 +128,7 @@ func (s *service) ResendVerification(email string) error {
 		return err
 	}
 
-	go s.mailer.Send([]string{user.Email}, "Verify your email", "Your new verification code is: "+code)
+	go s.mailer.SendOTPVerification(user.Email, code)
 	return nil
 }
 
