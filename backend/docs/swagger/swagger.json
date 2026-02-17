@@ -15,7 +15,7 @@
         },
         "version": "1.0"
     },
-    "host": "https://hackbuddy-im66.onrender.com",
+    "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
         "/admin/analyses": {

@@ -80,6 +80,8 @@ func (m *GomailMailer) SendOTPVerification(to string, code string) error {
 		return err
 	}
 
+	log.Printf("[mailer] sending OTP to %s (server=%s:%d)", to, m.cfg.SMTPServer, m.cfg.SMTPPort)
+
 	var buf bytes.Buffer
 	if err := m.otpTmpl.Execute(&buf, struct{ Code string }{Code: code}); err != nil {
 		log.Printf("[mailer] template execute: %v", err)
@@ -95,9 +97,10 @@ func (m *GomailMailer) SendOTPVerification(to string, code string) error {
 	msg.AddAlternative("text/plain", "Your HackBuddy verification code is: "+code)
 
 	if err := m.dialer.DialAndSend(msg); err != nil {
-		log.Printf("[mailer] OTP send failed (to=%s): %v", to, err)
+		log.Printf("[mailer] OTP send failed (to=%s): %v — if in cloud (e.g. Render), outbound SMTP ports 587/465 are often blocked; use an HTTP-based provider (SendGrid, Resend, Mailgun)", to, err)
 		return err
 	}
+	log.Printf("[mailer] OTP sent successfully to %s", to)
 	return nil
 }
 
