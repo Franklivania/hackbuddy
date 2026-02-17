@@ -51,7 +51,7 @@ func NewGroqClient(cfg *config.Config) *GroqClient {
 
 func (c *GroqClient) Chat(messages []Message, jsonMode bool) (string, error) {
 	reqBody := CompletionRequest{
-		Model:       "llama3-70b-8192", // Or user configured model
+		Model:       "llama-3.3-70b-versatile", // Or user configured model
 		Messages:    messages,
 		Temperature: 0.7,
 	}

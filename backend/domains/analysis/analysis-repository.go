@@ -9,6 +9,7 @@ type Repository interface {
 	GetAnalysesBySession(sessionID string) ([]Analysis, error)
 	GetLatestAnalysis(sessionID string) (*Analysis, error)
 	FindAll() ([]Analysis, error) // for admin
+	UnscopedDeleteAllBySessionIDs(sessionIDs []string) error
 
 	SetContext(sessionID string, key string, value string) error
 	GetContext(sessionID string, key string) (string, error)
@@ -40,6 +41,16 @@ func (r *repository) FindAll() ([]Analysis, error) {
 	var analyses []Analysis
 	err := db.DB.Find(&analyses).Error
 	return analyses, err
+}
+
+func (r *repository) UnscopedDeleteAllBySessionIDs(sessionIDs []string) error {
+	if len(sessionIDs) == 0 {
+		return nil
+	}
+	if err := db.DB.Unscoped().Where("session_id IN ?", sessionIDs).Delete(&Analysis{}).Error; err != nil {
+		return err
+	}
+	return db.DB.Where("session_id IN ?", sessionIDs).Delete(&SessionContext{}).Error
 }
 
 func (r *repository) SetContext(sessionID string, key string, value string) error {

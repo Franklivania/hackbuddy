@@ -27,6 +27,14 @@ func (m *MockRepository) FindByEmail(email string) (*User, error) {
 	return args.Get(0).(*User), args.Error(1)
 }
 
+func (m *MockRepository) FindByProvider(provider, providerID string) (*User, error) {
+	args := m.Called(provider, providerID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*User), args.Error(1)
+}
+
 func (m *MockRepository) FindByID(id string) (*User, error) {
 	args := m.Called(id)
 	return args.Get(0).(*User), args.Error(1)
@@ -69,6 +77,7 @@ func TestRegister(t *testing.T) {
 
 	input := RegisterInput{
 		Email:    "test@example.com",
+		FullName: "Test User",
 		Password: "password",
 	}
 

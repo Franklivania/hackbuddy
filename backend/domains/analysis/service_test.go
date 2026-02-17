@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"strings"
+
 	"hackbuddy-backend/domains/source"
 	"hackbuddy-backend/infrastructure/llm"
 	"testing"
@@ -8,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func contains(s, sub string) bool { return strings.Contains(s, sub) }
 
 // Mocks
 type MockRepository struct {
@@ -53,6 +57,11 @@ func (m *MockRepository) FindAll() ([]Analysis, error) {
 	return args.Get(0).([]Analysis), args.Error(1)
 }
 
+func (m *MockRepository) UnscopedDeleteAllBySessionIDs(sessionIDs []string) error {
+	args := m.Called(sessionIDs)
+	return args.Error(0)
+}
+
 type MockSourceRepository struct {
 	mock.Mock
 }
@@ -71,6 +80,11 @@ func (m *MockSourceRepository) FindChunksBySession(sessionID string) ([]source.S
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]source.SessionChunk), args.Error(1)
+}
+
+func (m *MockSourceRepository) UnscopedDeleteAllBySessionIDs(sessionIDs []string) error {
+	args := m.Called(sessionIDs)
+	return args.Error(0)
 }
 
 type MockLLMClient struct {
@@ -95,27 +109,65 @@ func TestAnalyzeSession(t *testing.T) {
 	}
 	mockSourceRepo.On("FindChunksBySession", sessionID).Return(chunks, nil)
 
-	// Analysis call
+	// Analysis call (system prompt includes guardrails)
 	mockLLM.On("Chat", mock.MatchedBy(func(msgs []llm.Message) bool {
-		// Strict check: Is this the analysis prompt?
-		return len(msgs) == 2 && msgs[0].Content == "You are a strategic analyst. Output strict JSON."
+		return len(msgs) == 2 && msgs[0].Role == "system" &&
+			contains(msgs[0].Content, "strategic analyst") && contains(msgs[0].Content, "JSON")
 	}), true).Return(`{"result": "success"}`, nil)
 
 	mockRepo.On("CreateAnalysis", mock.AnythingOfType("*analysis.Analysis")).Return(nil)
 
-	// Directive Generation call
+	// Directive Generation call (prompt includes guardrails)
 	mockLLM.On("Chat", mock.MatchedBy(func(msgs []llm.Message) bool {
-		// Strict check: Is this the directive prompt?
-		return len(msgs) == 3 && msgs[2].Content == "Based on the analysis, generate a simplified default directive for an AI assistant helping a user win this hackathon. Keep it under 50 words."
+		return len(msgs) == 3 && contains(msgs[2].Content, "Based on the analysis") && contains(msgs[2].Content, "default directive")
 	}), false).Return("Directive", nil)
 
 	mockRepo.On("SetContext", sessionID, "default_directive", "Directive").Return(nil)
 
-	result, err := service.AnalyzeSession(sessionID)
+	result, err := service.AnalyzeSession(sessionID, nil)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
+	mockRepo.AssertExpectations(t)
+	mockSourceRepo.AssertExpectations(t)
+	mockLLM.AssertExpectations(t)
+}
+
+func TestAnalyzeSession_WithDirectives(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockSourceRepo := new(MockSourceRepository)
+	mockLLM := new(MockLLMClient)
+
+	service := NewService(mockRepo, mockSourceRepo, mockLLM)
+	sessionID := "test-session"
+	directives := []string{"focus on devtools"}
+
+	chunks := []source.SessionChunk{
+		{Content: "Chunk 1", Summary: "Summary 1"},
+	}
+	mockSourceRepo.On("FindChunksBySession", sessionID).Return(chunks, nil)
+
+	mockRepo.On("SetContext", sessionID, CustomDirectivesKey, mock.MatchedBy(func(s string) bool {
+		return len(s) > 0 && (s[0] == '[' || s[0] == '"')
+	})).Return(nil)
+
+	mockLLM.On("Chat", mock.MatchedBy(func(msgs []llm.Message) bool {
+		return len(msgs) == 2 && contains(msgs[0].Content, "strategic analyst") && contains(msgs[0].Content, "JSON")
+	}), true).Return(`{"result": "success"}`, nil)
+
+	mockRepo.On("CreateAnalysis", mock.AnythingOfType("*analysis.Analysis")).Return(nil)
+
+	mockLLM.On("Chat", mock.MatchedBy(func(msgs []llm.Message) bool {
+		return len(msgs) == 3 && contains(msgs[2].Content, "Based on the analysis") && contains(msgs[2].Content, "default directive")
+	}), false).Return("Directive", nil)
+
+	mockRepo.On("SetContext", sessionID, "default_directive", "Directive").Return(nil)
+
+	result, err := service.AnalyzeSession(sessionID, directives)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
 	mockRepo.AssertExpectations(t)
 	mockSourceRepo.AssertExpectations(t)
 	mockLLM.AssertExpectations(t)

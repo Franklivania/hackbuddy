@@ -26,7 +26,9 @@ func (m *SMTPMailer) Send(to []string, subject string, body string) error {
 
 	auth := smtp.PlainAuth("", from, password, smtpHost)
 
-	msg := []byte("To: " + to[0] + "\r\n" +
+	fromHeader := "HackBuddy <" + from + ">"
+	msg := []byte("From: " + fromHeader + "\r\n" +
+		"To: " + to[0] + "\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"\r\n" +
 		body + "\r\n")

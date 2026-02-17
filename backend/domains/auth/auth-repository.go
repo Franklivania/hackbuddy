@@ -12,6 +12,7 @@ const verificationCodeTTL = 15 * time.Minute
 type Repository interface {
 	CreateUser(user *User) error
 	FindByEmail(email string) (*User, error)
+	FindByProvider(provider, providerID string) (*User, error)
 	FindByID(id string) (*User, error)
 	UpdateUser(user *User) error
 	StoreVerificationCode(email, code string) error
@@ -32,6 +33,12 @@ func (r *repository) CreateUser(user *User) error {
 func (r *repository) FindByEmail(email string) (*User, error) {
 	var user User
 	err := db.DB.Where("email = ?", email).First(&user).Error
+	return &user, err
+}
+
+func (r *repository) FindByProvider(provider, providerID string) (*User, error) {
+	var user User
+	err := db.DB.Where("provider = ? AND provider_id = ?", provider, providerID).First(&user).Error
 	return &user, err
 }
 

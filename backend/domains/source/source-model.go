@@ -10,7 +10,7 @@ type Source struct {
 	ID        string         `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	SessionID string         `gorm:"index;not null" json:"session_id"`
 	URL       string         `gorm:"not null" json:"url"`
-	Type      string         `gorm:"not null" json:"type"`            // event, winner, etc. - inferred or provided
+	Type      string         `gorm:"not null" json:"type"`            // winner (strategy links), subject (hackathon to compete in)
 	Status    string         `gorm:"default:'pending'" json:"status"` // pending, scraped, processed, failed
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

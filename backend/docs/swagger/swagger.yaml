@@ -1,4 +1,98 @@
 basePath: /api/v1
+definitions:
+  domains_admin.UpdateRoleRequest:
+    properties:
+      role:
+        enum:
+        - user
+        - admin
+        type: string
+    required:
+    - role
+    type: object
+  domains_analysis.AnalyzeInput:
+    properties:
+      directives:
+        items:
+          type: string
+        type: array
+    type: object
+  domains_auth.LoginInput:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  domains_auth.RegisterInput:
+    properties:
+      email:
+        type: string
+      full_name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - full_name
+    - password
+    type: object
+  domains_auth.ResendVerificationInput:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  domains_auth.VerifyEmailInput:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+    required:
+    - code
+    - email
+    type: object
+  domains_chat.ChatInput:
+    properties:
+      message:
+        type: string
+    required:
+    - message
+    type: object
+  domains_session.CreateSessionInput:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  domains_source.AddSourcesInput:
+    properties:
+      links:
+        items:
+          type: string
+        type: array
+      subject_link:
+        type: string
+    type: object
+  hackbuddy-backend_pkg_response.Response:
+    properties:
+      data:
+        description: '{} | [] | null'
+      message:
+        type: string
+      status:
+        description: '"success" | "error"'
+        type: string
+      success:
+        type: boolean
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -12,7 +106,754 @@ info:
   termsOfService: http://swagger.io/terms/
   title: Hackathon Intelligence Platform API
   version: "1.0"
-paths: {}
+paths:
+  /admin/analyses:
+    get:
+      consumes:
+      - application/json
+      description: Returns all analyses. Admin only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Analyses array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List all analyses (admin)
+      tags:
+      - admin
+  /admin/role/{user_id}:
+    patch:
+      consumes:
+      - application/json
+      description: Set user role to user or admin. Admin only.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domains_admin.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role updated
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Invalid role
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Update user role (admin)
+      tags:
+      - admin
+  /admin/sessions:
+    get:
+      consumes:
+      - application/json
+      description: Returns all sessions. Admin only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sessions array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List all sessions (admin)
+      tags:
+      - admin
+  /admin/user/{user_id}/delete:
+    delete:
+      description: Invalidates the user; they can be permanently removed after 90
+        days. Admin only.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User soft-deleted
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Soft delete a user (admin)
+      tags:
+      - admin
+  /admin/user/{user_id}/hard-delete:
+    delete:
+      description: Removes the user and all associated data. Admin only.
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Permanently delete a user (admin)
+      tags:
+      - admin
+  /admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Returns all users. Admin only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Users array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List all users (admin)
+      tags:
+      - admin
+  /auth/github:
+    get:
+      description: Redirects the user to GitHub sign-in. On success they are sent
+        to the callback URL.
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Redirect to GitHub
+      summary: Start GitHub OAuth
+      tags:
+      - auth
+  /auth/github/callback:
+    get:
+      description: Handles the redirect from GitHub with the authorization code. Exchanges
+        code for user info, finds or creates user, then redirects to frontend with
+        token.
+      parameters:
+      - description: Authorization code from GitHub
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State (optional)
+        in: query
+        name: state
+        type: string
+      responses:
+        "302":
+          description: Redirect to frontend with token in query
+        "400":
+          description: Missing code or exchange failed
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      summary: GitHub OAuth callback
+      tags:
+      - auth
+  /auth/google:
+    get:
+      description: Redirects the user to Google sign-in. On success they are sent
+        to the callback URL.
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Redirect to Google
+      summary: Start Google OAuth
+      tags:
+      - auth
+  /auth/google/callback:
+    get:
+      description: Handles the redirect from Google with the authorization code. Exchanges
+        code for user info, finds or creates user, then redirects to frontend with
+        token.
+      parameters:
+      - description: Authorization code from Google
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State (optional)
+        in: query
+        name: state
+        type: string
+      responses:
+        "302":
+          description: Redirect to frontend with token in query
+        "400":
+          description: Missing code or exchange failed
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      summary: Google OAuth callback
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password. Returns JWT. Email must be
+        verified for email provider.
+      parameters:
+      - description: Credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_auth.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token in data.token
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Invalid credentials or email not verified
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      summary: Log in
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register with email, full name, and password. A verification code
+        is sent by email; user must verify before login. OAuth (Google/GitHub) users
+        are auto-verified.
+      parameters:
+      - description: Registration data (email, full_name, password)
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_auth.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User registered, verify email
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Validation or email already in use
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      summary: Register a new user (manual / email)
+      tags:
+      - auth
+  /auth/resend-otp:
+    post:
+      consumes:
+      - application/json
+      description: Resend a new verification code for a manual (email) account that
+        is not yet verified.
+      parameters:
+      - description: Email to resend verification code to
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_auth.ResendVerificationInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification code resent
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Validation or resend not allowed
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      summary: Resend email verification code
+      tags:
+      - auth
+  /auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Confirm email with the code sent after registration.
+      parameters:
+      - description: Email and 6-digit code
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_auth.VerifyEmailInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Invalid or expired code
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      summary: Verify email
+      tags:
+      - auth
+  /sessions:
+    get:
+      consumes:
+      - application/json
+      description: Returns all sessions for the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sessions array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List my sessions
+      tags:
+      - sessions
+    post:
+      consumes:
+      - application/json
+      description: Create a new hackathon session for the authenticated user.
+      parameters:
+      - description: Session name
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_session.CreateSessionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Session in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a session
+      tags:
+      - sessions
+  /sessions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a session by ID (must belong to the user).
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Session deleted
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete a session
+      tags:
+      - sessions
+    get:
+      consumes:
+      - application/json
+      description: Get a single session by ID (must belong to the user).
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Session in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get a session
+      tags:
+      - sessions
+  /sessions/{id}/analyses:
+    get:
+      consumes:
+      - application/json
+      description: Returns all analyses run for the session.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Analyses array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List analyses for a session
+      tags:
+      - analysis
+  /sessions/{id}/analyze:
+    post:
+      consumes:
+      - application/json
+      description: 'Analyzes session sources and stores structured results plus a
+        default directive. Optional body: directives (strings) to steer the analysis
+        and assistant.'
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optional directives
+        in: body
+        name: input
+        schema:
+          $ref: '#/definitions/domains_analysis.AnalyzeInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Analysis in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "500":
+          description: Analysis failed
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Run analysis on a session
+      tags:
+      - analysis
+  /sessions/{id}/chat:
+    post:
+      consumes:
+      - application/json
+      description: Send a message in a session. Uses session context and directive.
+        Returns assistant reply.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message content
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_chat.ChatInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Assistant message in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Validation or guardrail
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Send a chat message
+      tags:
+      - chat
+  /sessions/{id}/sources:
+    get:
+      consumes:
+      - application/json
+      description: Returns all sources (URLs) added to the session.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sources array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List sources for a session
+      tags:
+      - sources
+    post:
+      consumes:
+      - application/json
+      description: Add winning-strategy links and the subject hackathon URL. Scraping
+        and processing run asynchronously. Provide at least one of links or subject_link.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: links (winning strategies), subject_link (hackathon to compete
+          in)
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_source.AddSourcesInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Sources array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Add sources to a session (batch)
+      tags:
+      - sources
+  /users/{id}:
+    get:
+      description: Returns a user by ID. Authenticated users only.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Returns the authenticated user's profile.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+  /users/me/delete:
+    delete:
+      description: Invalidates/revokes access; user details are retained.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account soft-deleted
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Soft delete own account
+      tags:
+      - users
 securityDefinitions:
   BearerAuth:
     in: header

@@ -23,12 +23,16 @@ type Config struct {
 	SMTPUser         string
 	SMTPPassword     string
 	FrontendURL          string
+	BackendURL           string // Base URL of this API (e.g. http://localhost:8080) for OAuth redirect_uri
 	AllowedScrapeDomains string // Comma-separated; empty means allow any (except blocked SSRF targets)
 }
 
 func LoadConfig() *Config {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+	// Prefer .env.local for local development, then .env (later load overrides).
+	// In Docker the binary runs without these files; Compose injects vars via env_file.
+	_ = godotenv.Load(".env")
+	if err := godotenv.Load(".env.local"); err == nil {
+		log.Println("Loaded .env.local")
 	}
 
 	appEnv := getEnv("APP_ENV", "development")
@@ -53,7 +57,8 @@ func LoadConfig() *Config {
 		SMTPPort:         getEnvAsInt("SMTP_PORT", 587),
 		SMTPUser:         getEnv("SMTP_USER", ""),
 		SMTPPassword:     getEnv("SMTP_PASSWORD", ""),
-		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:3000"),
+		FrontendURL:          getEnv("FRONTEND_URL", ""),
+		BackendURL:           getEnv("BACKEND_URL", ""),
 		AllowedScrapeDomains: getEnv("ALLOWED_SCRAPE_DOMAINS", ""),
 	}
 }

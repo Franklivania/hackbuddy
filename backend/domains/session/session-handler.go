@@ -19,6 +19,18 @@ type CreateSessionInput struct {
 	Name string `json:"name" binding:"required"`
 }
 
+// Create godoc
+// @Summary Create a session
+// @Description Create a new hackathon session for the authenticated user.
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param input body CreateSessionInput true "Session name"
+// @Success 201 {object} response.Response "Session in data"
+// @Failure 400 {object} response.Response "Validation error"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Router /sessions [post]
 func (h *Handler) Create(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 
@@ -37,6 +49,16 @@ func (h *Handler) Create(c *gin.Context) {
 	response.Created(c, session, "Session created successfully")
 }
 
+// GetAll godoc
+// @Summary List my sessions
+// @Description Returns all sessions for the authenticated user.
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response "Sessions array in data"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Router /sessions [get]
 func (h *Handler) GetAll(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 
@@ -49,6 +71,18 @@ func (h *Handler) GetAll(c *gin.Context) {
 	response.Success(c, sessions, "Sessions retrieved")
 }
 
+// GetOne godoc
+// @Summary Get a session
+// @Description Get a single session by ID (must belong to the user).
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Session ID"
+// @Success 200 {object} response.Response "Session in data"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 404 {object} response.Response "Session not found"
+// @Router /sessions/{id} [get]
 func (h *Handler) GetOne(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 	sessionID := c.Param("id")
@@ -62,6 +96,18 @@ func (h *Handler) GetOne(c *gin.Context) {
 	response.Success(c, session, "Session retrieved")
 }
 
+// Delete godoc
+// @Summary Delete a session
+// @Description Delete a session by ID (must belong to the user).
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Session ID"
+// @Success 200 {object} response.Response "Session deleted"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 404 {object} response.Response "Session not found"
+// @Router /sessions/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 	sessionID := c.Param("id")

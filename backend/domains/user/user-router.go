@@ -16,5 +16,7 @@ func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
 	userGroup.Use(middlewares.AuthMiddleware(cfg))
 	{
 		userGroup.GET("/me", handler.GetProfile)
+		userGroup.DELETE("/me/delete", handler.SoftDeleteMe)
+		userGroup.GET("/:id", handler.GetByID)
 	}
 }

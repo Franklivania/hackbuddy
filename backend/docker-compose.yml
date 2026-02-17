@@ -1,28 +1,36 @@
-version: '3.8'
+# Local dev: set DATABASE_URL in .env or .env.local (e.g. host=db for in-Docker, or host=host.docker.internal for host Postgres).
+# Compose passes DATABASE_URL through; optional defaults below.
 
 services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      - DATABASE_URL=host=db user=postgres password=postgres dbname=hackbuddy port=5432 sslmode=disable
-      - JWT_SECRET=dev_secret
-      - GROQ_API_KEY=${GROQ_API_KEY}
-  
   db:
     image: postgres:15-alpine
-    restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=hackbuddy
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-hackbuddy}
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hackbuddy}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.local
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-host=host.docker.internal user=postgres password=postgres dbname=hackbuddy port=5432 sslmode=disable}
+      - APP_PORT=${APP_PORT:-8080}
 
 volumes:
   postgres_data:

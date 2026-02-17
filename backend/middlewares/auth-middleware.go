@@ -2,6 +2,8 @@ package middlewares
 
 import (
 	"hackbuddy-backend/config"
+	"hackbuddy-backend/db"
+	"hackbuddy-backend/domains/auth"
 	"hackbuddy-backend/pkg/response"
 	"hackbuddy-backend/pkg/security"
 	"net/http"
@@ -23,6 +25,13 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		claims, err := security.ValidateToken(tokenString, cfg.JWTSecret)
 		if err != nil {
 			response.Error(c, http.StatusUnauthorized, "Invalid token")
+			c.Abort()
+			return
+		}
+
+		var u auth.User
+		if err := db.DB.Where("id = ?", claims.UserID).First(&u).Error; err != nil {
+			response.Error(c, http.StatusUnauthorized, "User not found or invalidated")
 			c.Abort()
 			return
 		}

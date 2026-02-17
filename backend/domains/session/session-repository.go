@@ -12,6 +12,7 @@ type Repository interface {
 	FindAllByUser(userID string) ([]Session, error)
 	FindAll() ([]Session, error) // for admin
 	Delete(id string, userID string) error
+	UnscopedDeleteAllByUserID(userID string) error
 }
 
 type repository struct{}
@@ -53,4 +54,8 @@ func (r *repository) Delete(id string, userID string) error {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+func (r *repository) UnscopedDeleteAllByUserID(userID string) error {
+	return db.DB.Unscoped().Where("user_id = ?", userID).Delete(&Session{}).Error
 }

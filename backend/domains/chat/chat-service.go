@@ -1,11 +1,13 @@
 package chat
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hackbuddy-backend/domains/analysis"
 	"hackbuddy-backend/domains/source"
 	"hackbuddy-backend/infrastructure/llm"
+	"hackbuddy-backend/pkg/guardrails"
 	"strings"
 )
 
@@ -30,20 +32,25 @@ func NewService(repo Repository, sourceRepo source.Repository, analysisRepo anal
 }
 
 func (s *service) SendMessage(sessionID string, content string) (*Message, error) {
-	// 1. Safety Guardrails (Regex/Keyword Check)
-	if isUnsafe(content) {
-		return nil, errors.New("This request is outside the permitted scope of this session.")
+	// 1. Safety Guardrails
+	if guardrails.IsBlocked(content) {
+		return nil, errors.New(guardrails.BlockedResponse)
 	}
 
-	// 2. Retrieve Directive
+	// 2. Retrieve Directive and optional custom directives
 	directive, _ := s.analysisRepo.GetContext(sessionID, "default_directive")
 	if directive == "" {
-		// Fallback or error? Logic says "Can only be augmented", implies it must exist?
-		// If analysis hasn't run, maybe basic fallback.
 		directive = "You are a helpful hackathon assistant."
 	}
+	var customDirectives []string
+	if raw, _ := s.analysisRepo.GetContext(sessionID, analysis.CustomDirectivesKey); raw != "" {
+		_ = json.Unmarshal([]byte(raw), &customDirectives)
+	}
+	if len(customDirectives) > 0 {
+		directive += "\nUser directives: " + strings.Join(customDirectives, "; ")
+	}
 
-	// 3. Retrieve Hints/Chunks (Simple implementation: get all or recent chunks)
+	// 3. Retrieve Hints/Chunks
 	// In production: Vector search. Here: fetching recent chunks.
 	chunks, _ := s.sourceRepo.FindChunksBySession(sessionID)
 	var contextStr string
@@ -59,14 +66,14 @@ func (s *service) SendMessage(sessionID string, content string) (*Message, error
 	history, _ := s.repo.GetMessagesBySession(sessionID)
 
 	// 5. Assembly
-	systemPrompt := fmt.Sprintf(`
-%s
+	systemPrompt := fmt.Sprintf(`%s
 
 SESSION CONTEXT:
 %s
 
-Refuse to answer if the request involves political persuasion, sexual content, violence, hate speech, or criminal instruction.
-`, directive, contextStr)
+GUARDRAIL INSTRUCTIONS (you MUST follow these):
+%s
+`, directive, contextStr, guardrails.SystemInstructions())
 
 	messages := []llm.Message{
 		{Role: "system", Content: systemPrompt},
@@ -94,15 +101,4 @@ Refuse to answer if the request involves political persuasion, sexual content, v
 	s.repo.CreateMessage(aiMsg)
 
 	return aiMsg, nil
-}
-
-func isUnsafe(content string) bool {
-	lower := strings.ToLower(content)
-	forbidden := []string{"kill", "murder", "bomb", "hate", "terror", "porn", "nude", "sex"}
-	for _, word := range forbidden {
-		if strings.Contains(lower, word) {
-			return true
-		}
-	}
-	return false
 }

@@ -9,6 +9,7 @@ type Repository interface {
 	FindSourcesBySession(sessionID string) ([]Source, error)
 	FindSourceByID(id string) (*Source, error)
 	UpdateSourceStatus(id string, status string) error
+	UnscopedDeleteAllBySessionIDs(sessionIDs []string) error
 
 	CreateDocument(doc *SessionDocument) error
 	CreateChunk(chunk *SessionChunk) error
@@ -39,6 +40,19 @@ func (r *repository) FindSourceByID(id string) (*Source, error) {
 
 func (r *repository) UpdateSourceStatus(id string, status string) error {
 	return db.DB.Model(&Source{}).Where("id = ?", id).Update("status", status).Error
+}
+
+func (r *repository) UnscopedDeleteAllBySessionIDs(sessionIDs []string) error {
+	if len(sessionIDs) == 0 {
+		return nil
+	}
+	if err := db.DB.Unscoped().Where("session_id IN ?", sessionIDs).Delete(&SessionChunk{}).Error; err != nil {
+		return err
+	}
+	if err := db.DB.Unscoped().Where("session_id IN ?", sessionIDs).Delete(&SessionDocument{}).Error; err != nil {
+		return err
+	}
+	return db.DB.Unscoped().Where("session_id IN ?", sessionIDs).Delete(&Source{}).Error
 }
 
 func (r *repository) CreateDocument(doc *SessionDocument) error {

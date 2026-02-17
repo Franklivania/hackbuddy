@@ -45,6 +45,11 @@ func (m *MockRepository) Delete(id, userID string) error {
 	return args.Error(0)
 }
 
+func (m *MockRepository) UnscopedDeleteAllByUserID(userID string) error {
+	args := m.Called(userID)
+	return args.Error(0)
+}
+
 func TestCreateSession(t *testing.T) {
 	mockRepo := new(MockRepository)
 	service := NewService(mockRepo)

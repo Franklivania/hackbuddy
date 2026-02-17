@@ -143,21 +143,23 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 }
 
 func runMigrations() {
-	// Order matters for foreign keys
-	// Users first, then Sessions, then others
-	err := db.DB.AutoMigrate(
-		&auth.User{},
-		&auth.EmailVerification{},
-		&session.Session{},
-		&source.Source{},
-		&source.SessionDocument{},
-		&source.SessionChunk{},
-		&analysis.Analysis{},
-		&analysis.SessionContext{},
-		&chat.Message{},
-	)
-	if err != nil {
-		log.Fatalf("Migration failed: %v", err)
-	}
-	log.Println("Migrations completed successfully")
+	db.RunMigrations([]db.Migration{
+		{
+			Version: 1,
+			Run: func() error {
+				// Order matters for foreign keys: users first, then sessions, then rest
+				return db.DB.AutoMigrate(
+					&auth.User{},
+					&auth.EmailVerification{},
+					&session.Session{},
+					&source.Source{},
+					&source.SessionDocument{},
+					&source.SessionChunk{},
+					&analysis.Analysis{},
+					&analysis.SessionContext{},
+					&chat.Message{},
+				)
+			},
+		},
+	})
 }

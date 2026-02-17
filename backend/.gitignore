@@ -8,7 +8,9 @@ main
 # Environment
 .env
 .env.local
+.env.prod
 .env.*.local
+.env.*.prod
 
 # IDE
 .idea/

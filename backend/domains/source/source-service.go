@@ -9,8 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	TypeWinner  = "winner"
+	TypeSubject = "subject"
+)
+
 type Service interface {
-	AddSource(sessionID string, url string, sourceType string) (*Source, error)
+	AddSourcesBatch(sessionID string, links []string, subjectLink string) ([]*Source, error)
 	ProcessSource(sourceID string) error
 	GetSessionSources(sessionID string) ([]Source, error)
 }
@@ -29,22 +34,41 @@ func NewService(repo Repository, scraper scraper.Scraper, knowService KnowledgeS
 	}
 }
 
-func (s *service) AddSource(sessionID string, url string, sourceType string) (*Source, error) {
-	source := &Source{
-		SessionID: sessionID,
-		URL:       url,
-		Type:      sourceType, // "event" or "winner"
-		Status:    "pending",
+func (s *service) AddSourcesBatch(sessionID string, links []string, subjectLink string) ([]*Source, error) {
+	if len(links) == 0 && subjectLink == "" {
+		return nil, nil
 	}
-
-	if err := s.repo.CreateSource(source); err != nil {
-		return nil, err
+	var created []*Source
+	for _, u := range links {
+		if u == "" {
+			continue
+		}
+		src := &Source{
+			SessionID: sessionID,
+			URL:       u,
+			Type:      TypeWinner,
+			Status:    "pending",
+		}
+		if err := s.repo.CreateSource(src); err != nil {
+			return created, err
+		}
+		created = append(created, src)
+		go s.ProcessSource(src.ID)
 	}
-
-	// Async processing
-	go s.ProcessSource(source.ID)
-
-	return source, nil
+	if subjectLink != "" {
+		src := &Source{
+			SessionID: sessionID,
+			URL:       subjectLink,
+			Type:      TypeSubject,
+			Status:    "pending",
+		}
+		if err := s.repo.CreateSource(src); err != nil {
+			return created, err
+		}
+		created = append(created, src)
+		go s.ProcessSource(src.ID)
+	}
+	return created, nil
 }
 
 func (s *service) ProcessSource(sourceID string) error {
