@@ -33,6 +33,16 @@ type GomailMailer struct {
 	otpTmpl  *template.Template
 }
 
+// NewMailer returns a Mailer that works in the current environment.
+// If RESEND_API_KEY is set, uses Resend (HTTP) — use this in production (e.g. Render) where SMTP ports are blocked.
+// Otherwise uses SMTP (Gomail) for local development.
+func NewMailer(cfg *config.Config) Mailer {
+	if cfg.ResendAPIKey != "" {
+		return NewResendMailer(cfg)
+	}
+	return NewGomailMailer(cfg)
+}
+
 func NewGomailMailer(cfg *config.Config) *GomailMailer {
 	tmpl, _ := template.ParseFS(templatesFS, otpVerTemplateName)
 	if tmpl == nil {

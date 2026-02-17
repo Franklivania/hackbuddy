@@ -9,7 +9,7 @@ import (
 
 func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
 	repo := NewRepository()
-	mailerService := mailer.NewGomailMailer(cfg)
+	mailerService := mailer.NewMailer(cfg)
 	service := NewService(repo, mailerService, cfg)
 	handler := NewHandler(service, cfg)
 

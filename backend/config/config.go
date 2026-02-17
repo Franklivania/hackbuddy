@@ -22,6 +22,8 @@ type Config struct {
 	SMTPPort         int
 	SMTPUser         string
 	SMTPPassword     string
+	ResendAPIKey     string // If set, use Resend (HTTP) instead of SMTP — works in cloud where 587 is blocked
+	ResendFrom       string // Sender e.g. "HackBuddy <onboarding@resend.dev>" or your verified domain
 	FrontendURL          string
 	BackendURL           string // Base URL of this API (e.g. http://localhost:8080) for OAuth redirect_uri
 	AllowedScrapeDomains string // Comma-separated; empty means allow any (except blocked SSRF targets)
@@ -57,7 +59,9 @@ func LoadConfig() *Config {
 		SMTPPort:         getEnvAsInt("SMTP_PORT", 587),
 		SMTPUser:         getEnv("SMTP_USER", ""),
 		SMTPPassword:     getEnv("SMTP_PASSWORD", ""),
-		FrontendURL:          getEnv("FRONTEND_URL", ""),
+		ResendAPIKey:     getEnv("RESEND_API_KEY", ""),
+		ResendFrom:       getEnv("RESEND_FROM", ""),
+		FrontendURL:      getEnv("FRONTEND_URL", ""),
 		BackendURL:           getEnv("BACKEND_URL", ""),
 		AllowedScrapeDomains: getEnv("ALLOWED_SCRAPE_DOMAINS", ""),
 	}
