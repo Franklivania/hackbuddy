@@ -13,6 +13,7 @@ import (
 type Service interface {
 	Register(input RegisterInput) error
 	Login(input LoginInput) (string, error)
+	Logout(tokenID string, expiresAt time.Time) error
 	VerifyEmail(email, code string) error
 	ResendVerification(email string) error
 	GoogleCallback(code string) (string, error)
@@ -85,6 +86,10 @@ func (s *service) Login(input LoginInput) (string, error) {
 	}
 
 	return token, nil
+}
+
+func (s *service) Logout(tokenID string, expiresAt time.Time) error {
+	return s.repo.AddRevokedToken(tokenID, expiresAt)
 }
 
 func (s *service) VerifyEmail(email, code string) error {

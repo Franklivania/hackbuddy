@@ -12,7 +12,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+// TokenRevocationChecker is used to reject revoked (logged-out) tokens. Pass nil to skip revocation check.
+type TokenRevocationChecker interface {
+	IsTokenRevoked(tokenID string) (bool, error)
+}
+
+func AuthMiddleware(cfg *config.Config, revokeChecker TokenRevocationChecker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -29,6 +34,20 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		if revokeChecker != nil {
+			revoked, err := revokeChecker.IsTokenRevoked(claims.ID)
+			if err != nil {
+				response.Error(c, http.StatusInternalServerError, "Authorization check failed")
+				c.Abort()
+				return
+			}
+			if revoked {
+				response.Error(c, http.StatusUnauthorized, "Token has been revoked")
+				c.Abort()
+				return
+			}
+		}
+
 		var u auth.User
 		if err := db.DB.Where("id = ?", claims.UserID).First(&u).Error; err != nil {
 			response.Error(c, http.StatusUnauthorized, "User not found or invalidated")
@@ -38,6 +57,7 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 		c.Set("user_id", claims.UserID)
 		c.Set("role", claims.Role)
+		c.Set("claims", claims)
 		c.Next()
 	}
 }

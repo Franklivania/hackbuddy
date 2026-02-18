@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
+func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc) {
 	userRepo := user.NewRepository()
 	sessionRepo := session.NewRepository()
 	analysisRepo := analysis.NewRepository()
@@ -22,7 +22,7 @@ func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
 	handler := NewHandler(service)
 
 	adminGroup := r.Group("/admin")
-	adminGroup.Use(middlewares.AuthMiddleware(cfg), middlewares.AdminMiddleware())
+	adminGroup.Use(authMiddleware, middlewares.AdminMiddleware())
 	{
 		adminGroup.GET("/users", handler.GetUsers)
 		adminGroup.GET("/sessions", handler.GetSessions)

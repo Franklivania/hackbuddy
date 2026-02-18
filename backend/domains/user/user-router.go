@@ -2,18 +2,17 @@ package user
 
 import (
 	"hackbuddy-backend/config"
-	"hackbuddy-backend/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
+func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc) {
 	repo := NewRepository()
 	service := NewService(repo)
 	handler := NewHandler(service)
 
 	userGroup := r.Group("/users")
-	userGroup.Use(middlewares.AuthMiddleware(cfg))
+	userGroup.Use(authMiddleware)
 	{
 		userGroup.GET("/me", handler.GetProfile)
 		userGroup.DELETE("/me/delete", handler.SoftDeleteMe)

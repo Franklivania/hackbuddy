@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/url"
+	"time"
 
 	"hackbuddy-backend/config"
 	"hackbuddy-backend/pkg/response"
+	"hackbuddy-backend/pkg/security"
 
 	"github.com/gin-gonic/gin"
 )
@@ -70,6 +72,37 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"token": token}, "Login successful")
+}
+
+// Logout godoc
+// @Summary Log out
+// @Description Invalidates the current JWT so it cannot be used again. Client should discard the token.
+// @Tags auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} response.Response "Logged out"
+// @Failure 401 {object} response.Response "Not authenticated"
+// @Router /auth/logout [post]
+func (h *Handler) Logout(c *gin.Context) {
+	val, ok := c.Get("claims")
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+	claims, ok := val.(*security.Claims)
+	if !ok {
+		response.Error(c, http.StatusInternalServerError, "Invalid token context")
+		return
+	}
+	exp := time.Now().Add(24 * time.Hour)
+	if claims.ExpiresAt != nil {
+		exp = claims.ExpiresAt.Time
+	}
+	if err := h.service.Logout(claims.ID, exp); err != nil {
+		response.Error(c, http.StatusInternalServerError, "Logout failed")
+		return
+	}
+	response.Success(c, nil, "Logged out successfully")
 }
 
 // VerifyEmail godoc

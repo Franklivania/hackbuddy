@@ -18,6 +18,8 @@ type Repository interface {
 	StoreVerificationCode(email, code string) error
 	GetVerificationCode(email string) (string, error)
 	DeleteVerificationCode(email string) error
+	AddRevokedToken(tokenID string, expiresAt time.Time) error
+	IsTokenRevoked(tokenID string) (bool, error)
 }
 
 type repository struct{}
@@ -75,4 +77,14 @@ func (r *repository) GetVerificationCode(email string) (string, error) {
 
 func (r *repository) DeleteVerificationCode(email string) error {
 	return db.DB.Delete(&EmailVerification{}, "email = ?", email).Error
+}
+
+func (r *repository) AddRevokedToken(tokenID string, expiresAt time.Time) error {
+	return db.DB.Create(&RevokedToken{TokenID: tokenID, ExpiresAt: expiresAt}).Error
+}
+
+func (r *repository) IsTokenRevoked(tokenID string) (bool, error) {
+	var n int64
+	err := db.DB.Model(&RevokedToken{}).Where("token_id = ?", tokenID).Limit(1).Count(&n).Error
+	return n > 0, err
 }

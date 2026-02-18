@@ -395,6 +395,26 @@ paths:
       summary: Log in
       tags:
       - auth
+  /auth/logout:
+    post:
+      description: Invalidates the current JWT so it cannot be used again. Client
+        should discard the token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logged out
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Log out
+      tags:
+      - auth
   /auth/register:
     post:
       consumes:

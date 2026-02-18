@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
+func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc) {
 	repo := NewRepository()
 	sourceRepo := source.NewRepository()
 	llmClient := llm.NewGroqClient(cfg)
@@ -19,7 +19,7 @@ func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
 	handler := NewHandler(service)
 
 	sessionGroup := r.Group("/sessions/:id")
-	sessionGroup.Use(middlewares.AuthMiddleware(cfg), middlewares.SessionOwnershipMiddleware(session.NewOwnershipChecker(session.NewRepository())))
+	sessionGroup.Use(authMiddleware, middlewares.SessionOwnershipMiddleware(session.NewOwnershipChecker(session.NewRepository())))
 	{
 		sessionGroup.POST("/analyze", handler.Analyze)
 		sessionGroup.GET("/analyses", handler.GetAnalyses)

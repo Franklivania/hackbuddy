@@ -25,3 +25,9 @@ type EmailVerification struct {
 	Code      string    `gorm:"not null" json:"code"`
 	ExpiresAt time.Time `gorm:"not null" json:"expires_at"`
 }
+
+// RevokedToken stores JWT IDs (jti) that have been invalidated on logout.
+type RevokedToken struct {
+	TokenID   string    `gorm:"primaryKey;type:varchar(64)" json:"token_id"`
+	ExpiresAt time.Time `gorm:"not null;index" json:"expires_at"`
+}

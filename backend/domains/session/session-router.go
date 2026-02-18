@@ -2,18 +2,17 @@ package session
 
 import (
 	"hackbuddy-backend/config"
-	"hackbuddy-backend/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
+func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc) {
 	repo := NewRepository()
 	service := NewService(repo)
 	handler := NewHandler(service)
 
 	sessionGroup := r.Group("/sessions")
-	sessionGroup.Use(middlewares.AuthMiddleware(cfg))
+	sessionGroup.Use(authMiddleware)
 	{
 		sessionGroup.POST("", handler.Create)
 		sessionGroup.GET("", handler.GetAll)

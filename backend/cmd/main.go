@@ -146,14 +146,16 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	// API Group
 	api := r.Group(BasePath)
 	{
-		// Register Routes
-		auth.RegisterRoutes(api, cfg)
-		user.RegisterRoutes(api, cfg)
-		session.RegisterRoutes(api, cfg)
-		source.RegisterRoutes(api, cfg)
-		analysis.RegisterRoutes(api, cfg)
-		chat.RegisterRoutes(api, cfg)
-		admin.RegisterRoutes(api, cfg)
+		authRepo := auth.NewRepository()
+		authMiddleware := middlewares.AuthMiddleware(cfg, authRepo)
+		// Register Routes (auth needs repo + middleware for logout; others need middleware for protected routes)
+		auth.RegisterRoutes(api, cfg, authRepo, authMiddleware)
+		user.RegisterRoutes(api, cfg, authMiddleware)
+		session.RegisterRoutes(api, cfg, authMiddleware)
+		source.RegisterRoutes(api, cfg, authMiddleware)
+		analysis.RegisterRoutes(api, cfg, authMiddleware)
+		chat.RegisterRoutes(api, cfg, authMiddleware)
+		admin.RegisterRoutes(api, cfg, authMiddleware)
 	}
 
 	return r
@@ -176,6 +178,12 @@ func runMigrations() {
 					&analysis.SessionContext{},
 					&chat.Message{},
 				)
+			},
+		},
+		{
+			Version: 2,
+			Run: func() error {
+				return db.DB.AutoMigrate(&auth.RevokedToken{})
 			},
 		},
 	})

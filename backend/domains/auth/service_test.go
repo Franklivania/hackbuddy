@@ -2,6 +2,8 @@ package auth
 
 import (
 	"errors"
+	"time"
+
 	"hackbuddy-backend/config"
 	"testing"
 
@@ -58,6 +60,16 @@ func (m *MockRepository) GetVerificationCode(email string) (string, error) {
 func (m *MockRepository) DeleteVerificationCode(email string) error {
 	args := m.Called(email)
 	return args.Error(0)
+}
+
+func (m *MockRepository) AddRevokedToken(tokenID string, expiresAt time.Time) error {
+	args := m.Called(tokenID, expiresAt)
+	return args.Error(0)
+}
+
+func (m *MockRepository) IsTokenRevoked(tokenID string) (bool, error) {
+	args := m.Called(tokenID)
+	return args.Bool(0), args.Error(1)
 }
 
 type MockMailer struct {

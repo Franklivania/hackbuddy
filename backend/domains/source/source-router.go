@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
+func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc) {
 	repo := NewRepository()
 	// Shared clients
 	llmClient := llm.NewGroqClient(cfg)
@@ -22,15 +22,8 @@ func RegisterRoutes(r gin.IRouter, cfg *config.Config) {
 	service := NewService(repo, scraperService, knowService)
 	handler := NewHandler(service)
 
-	// Routes usually nested under sessions
-	// POST /sessions/:id/sources
-	// GET  /sessions/:id/sources
-
-	// We can register these globally or attach to a group if we have access.
-	// Here we register them directly.
-
 	sessionGroup := r.Group("/sessions/:id")
-	sessionGroup.Use(middlewares.AuthMiddleware(cfg), middlewares.SessionOwnershipMiddleware(session.NewOwnershipChecker(session.NewRepository())))
+	sessionGroup.Use(authMiddleware, middlewares.SessionOwnershipMiddleware(session.NewOwnershipChecker(session.NewRepository())))
 	{
 		sessionGroup.POST("/sources", handler.AddSource)
 		sessionGroup.GET("/sources", handler.GetSources)
