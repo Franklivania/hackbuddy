@@ -38,7 +38,7 @@ export default function AuthCallback() {
       if (cancelled) return;
       if (result.ok) {
         setStatus("ok");
-        navigate("/", { replace: true });
+        navigate("/app", { replace: true });
       } else {
         setStatus("error");
         setErrorMessage(result.error ?? "Sign-in failed.");

@@ -3,9 +3,13 @@ import { Link, useNavigate } from "react-router";
 import { useEffect } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { Button } from "@/components/ui/button";
+import AppHeader from "@/components/layout/app-layout/header";
+import AppSidebar from "@/components/layout/app-layout/sidebar";
+import { Spinner } from "@/components/ui/spinner";
+import DashboardDisplay from "@/components/dashboard";
 
-export function meta({}: Route.MetaArgs) {
-  return [{ title: "Dashboard – Hackathon Buddy" }];
+export function meta({ }: Route.MetaArgs) {
+  return [{ title: "Dashboard - Hackathon Buddy" }];
 }
 
 export default function Dashboard() {
@@ -29,7 +33,7 @@ export default function Dashboard() {
   if (!isHydrated || (!user && useAuthStore.getState().token)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground flex items-center gap-3"> <Spinner /> Loading…</p>
       </div>
     );
   }
@@ -37,24 +41,27 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <header className="flex items-center justify-between max-w-4xl mx-auto mb-8">
-        <Link to="/" className="text-lg font-medium text-foreground hover:underline">
-          Hackathon Buddy
-        </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{user.email}</span>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            Log out
-          </Button>
-        </div>
-      </header>
-      <main className="max-w-4xl mx-auto">
-        <h1 className="h1 mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user.full_name}. Your sessions and strategy tools will appear here.
-        </p>
-      </main>
-    </div>
+    <main className="h-screen bg-background overflow-hidden grid"
+      style={{
+        gridArea: "content",
+        gridTemplateAreas: `
+          "sidebar header"
+          "sidebar content"
+        `,
+        gridTemplateColumns: "auto 1fr",
+        gridTemplateRows: "auto 1fr",
+      }}
+    >
+      <div style={{ gridArea: "sidebar" }} className="h-full">
+        <AppSidebar />
+      </div>
+      <div style={{ gridArea: "header" }}>
+        <AppHeader />
+      </div>
+      <div style={{ gridArea: "content" }} className="p-4 overflow-x-hidden overflow-y-auto">
+        <DashboardDisplay />
+      </div>
+
+    </main>
   );
 }

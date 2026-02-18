@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
 
-const LOGO_LABEL = "Hackathon Buddy";
+const LOGO_LABEL = "HackBuddy";
 const CTA_LABEL = "Start Your Session";
 const DASHBOARD_LABEL = "Go to Dashboard";
 const NAV_LINKS = [

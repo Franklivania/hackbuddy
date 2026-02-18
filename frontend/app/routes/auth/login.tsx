@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { GoogleIcon, GithubIcon } from "@/components/auth-provider-icons";
 
 export function meta({}: Route.MetaArgs) {
-  return [{ title: "Log in – Hackathon Buddy" }];
+  return [{ title: "Log in - Hackathon Buddy" }];
 }
 
 export default function Login() {
@@ -26,7 +26,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   }, [user, navigate]);
 
@@ -38,7 +38,7 @@ export default function Login() {
     const result = await login({ email, password });
     setSubmitting(false);
     if (result.ok) {
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     } else {
       setError(result.error ?? "Login failed");
     }
