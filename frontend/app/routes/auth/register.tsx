@@ -31,7 +31,7 @@ export default function Register() {
 
   useEffect(() => {
     if (user) {
-      navigate("/app", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   }, [user, navigate]);
 
