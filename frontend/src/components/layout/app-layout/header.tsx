@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { useNavigate } from "react-router";
-import { Link2, LogOut } from "lucide-react";
+import { useNavigate, Link } from "react-router";
+import { Link2, LogOut, Shield } from "lucide-react";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { getInitials } from "@/lib/initials";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,20 @@ export default function AppHeader() {
             </button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-56 p-2">
+            {user.role === "admin" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-muted-foreground"
+                asChild
+                onClick={() => setPopoverOpen(false)}
+              >
+                <Link to="/admin">
+                  <Shield className="size-4" />
+                  Admin Panel
+                </Link>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

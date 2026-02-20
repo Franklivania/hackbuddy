@@ -7,6 +7,24 @@ import AppHeader from "@/components/layout/app-layout/header";
 import AppSidebar from "@/components/layout/app-layout/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import DashboardDisplay from "@/components/dashboard";
+import { SessionChat } from "@/components/dashboard/session-chat";
+import { useSessionManagerStore } from "@/lib/stores/session-manager";
+
+function ContentArea() {
+  const currentSessionId = useSessionManagerStore((s) => s.currentSessionId);
+  const isReady = useSessionManagerStore((s) => s.status === "ready");
+
+  return (
+    <div style={{ gridArea: "content" }} className="relative flex h-full min-w-0 flex-col overflow-hidden">
+      <div className="min-w-0 h-full flex-1 overflow-x-hidden overflow-y-auto p-4">
+        <DashboardDisplay />
+      </div>
+      {currentSessionId && (
+        <SessionChat sessionId={currentSessionId} enabled={isReady} />
+      )}
+    </div>
+  );
+}
 
 export function meta({ }: Route.MetaArgs) {
   return [{ title: "Dashboard - Hackathon Buddy" }];
@@ -58,10 +76,7 @@ export default function Dashboard() {
       <div style={{ gridArea: "header" }}>
         <AppHeader />
       </div>
-      <div style={{ gridArea: "content" }} className="p-4 overflow-x-hidden overflow-y-auto">
-        <DashboardDisplay />
-      </div>
-
+      <ContentArea />
     </main>
   );
 }

@@ -52,8 +52,14 @@ export type {
 
 // Admin
 export type {
+  AdminUser,
+  AdminSession,
+  AdminAnalysis,
+  TokenUsage,
+  UsageSummaryRow,
+  ModelInfo,
   UpdateRoleRequest,
-  UpdateRoleSuccessData,
+  UpdateModelRequest,
 } from './admin'
 
 // Health

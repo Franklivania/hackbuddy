@@ -6,7 +6,10 @@
 // ─── Admin ─────────────────────────────────────────────────────────────────
 export const ADMIN = {
   analyses: '/admin/analyses',
+  model: '/admin/model',
   sessions: '/admin/sessions',
+  usage: '/admin/usage',
+  usageSummary: '/admin/usage/summary',
   users: '/admin/users',
   role: (userId: string) => `/admin/role/${userId}`,
   userSoftDelete: (userId: string) => `/admin/user/${userId}/delete`,
@@ -37,16 +40,19 @@ export const SESSIONS = {
 // ─── Analysis (per session) ────────────────────────────────────────────────
 export const ANALYSIS = {
   list: (sessionId: string) => `/sessions/${sessionId}/analyses`,
+  summary: (sessionId: string) => `/sessions/${sessionId}/analysis/summary`,
   run: (sessionId: string) => `/sessions/${sessionId}/analyze`,
 } as const;
 
 // ─── Chat (per session) ─────────────────────────────────────────────────────
 export const CHAT = {
   send: (sessionId: string) => `/sessions/${sessionId}/chat`,
+  history: (sessionId: string) => `/sessions/${sessionId}/chat`,
 } as const;
 
 // ─── Sources (per session) ───────────────────────────────────────────────────
 export const SOURCES = {
+  chunks: (sessionId: string) => `/sessions/${sessionId}/chunks`,
   list: (sessionId: string) => `/sessions/${sessionId}/sources`,
   add: (sessionId: string) => `/sessions/${sessionId}/sources`,
 } as const;
@@ -62,8 +68,12 @@ export const USERS = {
 export const API_ENDPOINTS = {
   admin: {
     'GET /admin/analyses': ADMIN.analyses,
+    'GET /admin/model': ADMIN.model,
+    'PATCH /admin/model': ADMIN.model,
     'PATCH /admin/role/:user_id': ADMIN.role,
     'GET /admin/sessions': ADMIN.sessions,
+    'GET /admin/usage': ADMIN.usage,
+    'GET /admin/usage/summary': ADMIN.usageSummary,
     'DELETE /admin/user/:user_id/delete': ADMIN.userSoftDelete,
     'DELETE /admin/user/:user_id/hard-delete': ADMIN.userHardDelete,
     'GET /admin/users': ADMIN.users,
@@ -83,16 +93,20 @@ export const API_ENDPOINTS = {
     'GET /sessions': SESSIONS.list,
     'POST /sessions': SESSIONS.create,
     'GET /sessions/:id': SESSIONS.one,
+    'PATCH /sessions/:id': SESSIONS.one,
     'DELETE /sessions/:id': SESSIONS.delete,
   },
   analysis: {
     'GET /sessions/:id/analyses': ANALYSIS.list,
+    'GET /sessions/:id/analysis/summary': ANALYSIS.summary,
     'POST /sessions/:id/analyze': ANALYSIS.run,
   },
   chat: {
+    'GET /sessions/:id/chat': CHAT.history,
     'POST /sessions/:id/chat': CHAT.send,
   },
   sources: {
+    'GET /sessions/:id/chunks': SOURCES.chunks,
     'GET /sessions/:id/sources': SOURCES.list,
     'POST /sessions/:id/sources': SOURCES.add,
   },

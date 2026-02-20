@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Image from "@/components/ui/image";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useSessionManagerStore } from "@/lib/stores/session-manager";
 import type { Session } from "@/types/sessions";
 import { cn } from "@/lib/utils";
-import { LayoutList, Plus, Trash2 } from "lucide-react";
+import { Check, LayoutList, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,12 +21,31 @@ export default function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const sessionIdFromUrl = new URLSearchParams(location.search ?? "").get("session");
-  const { sessions, currentSessionId, setCurrentSessionId, deleteSession, createSession } = useSessionManagerStore();
+  const { sessions, currentSessionId, setCurrentSessionId, deleteSession, createSession, updateSession } =
+    useSessionManagerStore();
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newSessionTitle, setNewSessionTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [isSavingName, setIsSavingName] = useState(false);
+  const lastClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
+
+  const handleSessionRowClick = (session: Session) => {
+    const now = Date.now();
+    const isDouble = lastClickRef.current.id === session.id && now - lastClickRef.current.time < 400;
+    if (isDouble) {
+      lastClickRef.current = { id: "", time: 0 };
+      setEditingSessionId(session.id);
+      setEditingName(session.name);
+      return;
+    }
+    lastClickRef.current = { id: session.id, time: now };
+    setCurrentSessionId(session.id);
+    navigate(`/dashboard?session=${session.id}`);
+  };
 
   return (
     <aside className="hidden w-64 h-full shrink-0 border-r border-border bg-muted/30 md:flex flex-col">
@@ -62,38 +81,103 @@ export default function AppSidebar() {
               const href = `/dashboard?session=${session.id}`;
               const isActive =
                 currentSessionId === session.id || (sessionIdFromUrl === session.id && !currentSessionId);
+              const isEditing = editingSessionId === session.id;
               return (
                 <div
                   key={session.id}
                   className={cn(
                     "group flex items-center gap-1 rounded-md text-sm transition-colors",
-                    isActive
+                    isActive && !isEditing
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <Link
-                    to={href}
-                    onClick={() => setCurrentSessionId(session.id)}
-                    className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2"
-                  >
-                    <LayoutList className="size-4 shrink-0" />
-                    <span className="truncate">{session.name}</span>
-                  </Link>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 opacity-0 group-hover:opacity-100 mr-1"
-                    aria-label={`Delete ${session.name}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSessionToDelete(session);
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  {isEditing ? (
+                    <div className="flex min-w-0 flex-1 items-center gap-1 px-2 py-1.5">
+                      <Input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (editingName.trim() && !isSavingName) {
+                              setIsSavingName(true);
+                              updateSession(session.id, { name: editingName.trim() }).then(() => {
+                                setIsSavingName(false);
+                                setEditingSessionId(null);
+                                setEditingName("");
+                              });
+                            }
+                          }
+                          if (e.key === "Escape") {
+                            setEditingSessionId(null);
+                            setEditingName("");
+                          }
+                        }}
+                        className="h-8 text-sm flex-1 min-w-0"
+                        autoFocus
+                        disabled={isSavingName}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        aria-label="Save name"
+                        disabled={isSavingName || !editingName.trim()}
+                        onClick={() => {
+                          if (!editingName.trim() || isSavingName) return;
+                          setIsSavingName(true);
+                          updateSession(session.id, { name: editingName.trim() }).then(() => {
+                            setIsSavingName(false);
+                            setEditingSessionId(null);
+                            setEditingName("");
+                          });
+                        }}
+                      >
+                        <Check className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        aria-label="Cancel edit"
+                        disabled={isSavingName}
+                        onClick={() => {
+                          setEditingSessionId(null);
+                          setEditingName("");
+                        }}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleSessionRowClick(session)}
+                        className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left w-full bg-transparent border-none cursor-pointer rounded-md"
+                      >
+                        <LayoutList className="size-4 shrink-0" />
+                        <span className="truncate">{session.name}</span>
+                      </button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="shrink-0 opacity-0 group-hover:opacity-100 mr-1"
+                        aria-label={`Delete ${session.name}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSessionToDelete(session);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               );
             })}

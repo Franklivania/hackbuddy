@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import type { Session } from "@/types/sessions";
-import type { CreateSessionInput } from "@/types/sessions";
+import type { CreateSessionInput, UpdateSessionInput } from "@/types/sessions";
 import type { AddSourcesInput } from "@/types/sources";
+import type { Message, ChatInput } from "@/types/chat";
+import type { Chunk } from "@/types/chunks";
 import type { ApiResponse } from "@/types/api";
-import { getData, postData, deleteData } from "@/lib/services/api-actions";
-import { SESSIONS, SOURCES, ANALYSIS } from "@/lib/services/API_ENDPOINTS";
+import { getData, postData, patchData, deleteData } from "@/lib/services/api-actions";
+import { SESSIONS, SOURCES, ANALYSIS, CHAT } from "@/lib/services/API_ENDPOINTS";
 
 export type SessionStatus = "idle" | "loading" | "processing" | "ready" | "error";
 
@@ -20,17 +22,23 @@ interface SessionManagerState {
   status: SessionStatus;
   message: string;
   content: string;
+  analysisData: Record<string, unknown> | null;
   error: string | null;
   steps: ProcessStep[];
   sessions: Session[];
   currentSessionId: string | null;
   isLoadingSessions: boolean;
+  chunksCache: Record<string, Chunk[]>;
+  chunksFetchingIds: string[];
+  chatMessages: Message[];
+  isSendingChat: boolean;
+  chatError: string | null;
 }
 
 interface SessionManagerActions {
   startProcessing: (message?: string) => void;
   setUpdate: (message: string) => void;
-  setContent: (content: string) => void;
+  setContent: (content: string, analysisData?: Record<string, unknown> | null) => void;
   setError: (message: string) => void;
   setSteps: (steps: ProcessStep[]) => void;
   setStepStatus: (stepId: string, status: StepStatus) => void;
@@ -41,16 +49,22 @@ interface SessionManagerActions {
   setCurrentSessionId: (id: string | null) => void;
   setSessions: (sessions: Session[]) => void;
   reset: () => void;
+  resetToForm: () => void;
   // API
   fetchSessions: () => Promise<Session[]>;
   createSession: (input: CreateSessionInput) => Promise<Session | null>;
+  updateSession: (id: string, input: UpdateSessionInput) => Promise<Session | null>;
   getSession: (id: string) => Promise<Session | null>;
   deleteSession: (id: string) => Promise<boolean>;
+  getNextDefaultSessionName: () => string;
   addSources: (sessionId: string, input: AddSourcesInput) => Promise<boolean>;
   listSources: (sessionId: string) => Promise<unknown>;
   listAnalyses: (sessionId: string) => Promise<AnalysisResultData[]>;
-  runAnalysis: (sessionId: string) => Promise<{ content?: string; markdown?: string } | null>;
+  runAnalysis: (sessionId: string) => Promise<{ content?: string; markdown?: string; analysisData?: Record<string, unknown> | null } | null>;
   loadSessionContent: (sessionId: string) => Promise<void>;
+  fetchChunks: (sessionId: string) => Promise<Chunk[]>;
+  fetchChatHistory: (sessionId: string) => Promise<Message[]>;
+  sendChatMessage: (sessionId: string, message: string) => Promise<Message | null>;
 }
 
 function unwrap<T>(res: { data: ApiResponse<T> | null }): T | null {
@@ -127,11 +141,17 @@ const initialState: SessionManagerState = {
   status: "idle",
   message: "",
   content: "",
+  analysisData: null,
   error: null,
   steps: defaultSteps,
   sessions: [],
   currentSessionId: null,
   isLoadingSessions: false,
+  chunksCache: {},
+  chunksFetchingIds: [],
+  chatMessages: [],
+  isSendingChat: false,
+  chatError: null,
 };
 
 export const useSessionManagerStore = create<SessionManagerState & SessionManagerActions>()((set, get) => ({
@@ -142,6 +162,7 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
       status: "loading",
       message,
       content: "",
+      analysisData: null,
       error: null,
     });
   },
@@ -154,11 +175,12 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
     }));
   },
 
-  setContent(content: string) {
+  setContent(content: string, analysisData?: Record<string, unknown> | null) {
     set({
       status: "ready",
       message: "",
       content,
+      analysisData: analysisData ?? null,
       error: null,
     });
   },
@@ -221,7 +243,7 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
   },
 
   setCurrentSessionId(id: string | null) {
-    set({ currentSessionId: id });
+    set({ currentSessionId: id, chatMessages: [], isSendingChat: false, chatError: null });
   },
 
   setSessions(sessions: Session[]) {
@@ -230,6 +252,20 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
 
   reset() {
     set(initialState);
+  },
+
+  resetToForm() {
+    set({
+      status: "idle",
+      message: "",
+      content: "",
+      analysisData: null,
+      error: null,
+      steps: [],
+      chatMessages: [],
+      isSendingChat: false,
+      chatError: null,
+    });
   },
 
   async fetchSessions() {
@@ -249,9 +285,27 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
     }
   },
 
+  getNextDefaultSessionName() {
+    const names = get().sessions.map((s) => s.name);
+    const used = new Set<number>();
+    for (const n of names) {
+      const t = n.trim();
+      const match = t.match(/^New Session\s*(\d+)$/i);
+      if (match) used.add(parseInt(match[1], 10));
+      else if (t.toLowerCase() === "new session") used.add(1);
+    }
+    let n = 1;
+    while (used.has(n)) n++;
+    return `New Session ${n}`;
+  },
+
   async createSession(input: CreateSessionInput) {
     try {
-      const res = await postData<ApiResponse<Session>, CreateSessionInput>(SESSIONS.create, input);
+      const raw = input.name?.trim() ?? "";
+      const useDefault =
+        !raw || /^New Session(\s*\d*)?$/i.test(raw) || raw.toLowerCase() === "new session";
+      const name = useDefault ? get().getNextDefaultSessionName() : input.name;
+      const res = await postData<ApiResponse<Session>, CreateSessionInput>(SESSIONS.create, { name });
       const session = unwrap<Session>(res);
       if (session) {
         get().addSession(session);
@@ -261,6 +315,22 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
     } catch (err: unknown) {
       const msg = err && typeof err === "object" && "data" in err ? (err as { data?: { message?: string } }).data?.message : null;
       get().setError(msg ?? "Failed to create session");
+      return null;
+    }
+  },
+
+  async updateSession(id: string, input: UpdateSessionInput) {
+    try {
+      const res = await patchData<ApiResponse<Session>, UpdateSessionInput>(SESSIONS.one(id), input);
+      const session = unwrap<Session>(res);
+      if (session) {
+        set((s) => ({
+          sessions: s.sessions.map((x) => (x.id === id ? session : x)),
+        }));
+        return session;
+      }
+      return null;
+    } catch {
       return null;
     }
   },
@@ -347,24 +417,71 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
           return bAt > aAt ? b : a;
         });
         const content = analysisResultToMarkdown(latest);
+        let analysisData: Record<string, unknown> | null = null;
+        if (latest.result_json) {
+          try { analysisData = JSON.parse(latest.result_json) as Record<string, unknown>; } catch { /* use markdown fallback */ }
+        }
         set({
           status: "ready",
           message: "",
           content: content || "# No content",
+          analysisData,
           error: null,
           steps,
         });
+        void get().fetchChunks(sessionId);
+        void get().fetchChatHistory(sessionId);
       } else {
-        set({
-          status: "idle",
-          message: "",
-          content: "",
-          error: null,
-          steps: [],
-        });
+        const sourcesRaw = await get().listSources(sessionId);
+        const sourceList = Array.isArray(sourcesRaw) ? sourcesRaw : [];
+        if (sourceList.length > 0) {
+          set({
+            status: "error",
+            message: "",
+            content: "",
+            analysisData: null,
+            error: "Analysis not completed. You can retry or start over.",
+            steps: PROCESS_STEP_LABELS.map((label, i) => ({
+              id: `step-${i}`,
+              label,
+              status: (i === 0 ? "complete" : i === 1 ? "failed" : "pending") as StepStatus,
+            })),
+          });
+        } else {
+          set({
+            status: "idle",
+            message: "",
+            content: "",
+            error: null,
+            steps: [],
+          });
+        }
       }
     } catch {
       set({ status: "error", error: "Failed to load session" });
+    }
+  },
+
+  async fetchChunks(sessionId: string) {
+    const { chunksFetchingIds } = get();
+    if (chunksFetchingIds.includes(sessionId)) {
+      return get().chunksCache[sessionId] ?? [];
+    }
+    set({ chunksFetchingIds: [...chunksFetchingIds, sessionId] });
+    try {
+      const res = await getData<ApiResponse<Chunk[]>>(SOURCES.chunks(sessionId));
+      const body = res.data;
+      const chunks = body?.success && Array.isArray(body.data) ? body.data : [];
+      set((s) => ({
+        chunksCache: { ...s.chunksCache, [sessionId]: chunks },
+        chunksFetchingIds: s.chunksFetchingIds.filter((id) => id !== sessionId),
+      }));
+      return chunks;
+    } catch {
+      set((s) => ({
+        chunksFetchingIds: s.chunksFetchingIds.filter((id) => id !== sessionId),
+      }));
+      return get().chunksCache[sessionId] ?? [];
     }
   },
 
@@ -372,11 +489,63 @@ export const useSessionManagerStore = create<SessionManagerState & SessionManage
     try {
       const res = await postData<ApiResponse<AnalysisResultData>>(ANALYSIS.run(sessionId));
       const data = unwrap<AnalysisResultData>(res);
+      let analysisData: Record<string, unknown> | null = null;
+      if (data?.result_json) {
+        try { analysisData = JSON.parse(data.result_json) as Record<string, unknown>; } catch { /* fallback to markdown */ }
+      }
       const content = analysisResultToMarkdown(data);
-      return content ? { content } : null;
+      return content ? { content, analysisData } : null;
     } catch (err: unknown) {
       const msg = err && typeof err === "object" && "data" in err ? (err as { data?: { message?: string } }).data?.message : null;
       get().setError(msg ?? "Analysis failed");
+      return null;
+    }
+  },
+
+  async fetchChatHistory(sessionId: string) {
+    try {
+      const res = await getData<ApiResponse<Message[]>>(CHAT.history(sessionId));
+      const messages = unwrap<Message[]>(res);
+      if (Array.isArray(messages)) {
+        set({ chatMessages: messages.filter((m) => m.role !== "system") });
+        return messages;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  async sendChatMessage(sessionId: string, message: string) {
+    const userMsg: Message = {
+      id: `local-${Date.now()}`,
+      session_id: sessionId,
+      role: "user",
+      content: message,
+      created_at: new Date().toISOString(),
+    };
+    set((s) => ({
+      chatMessages: [...s.chatMessages, userMsg],
+      isSendingChat: true,
+      chatError: null,
+    }));
+    try {
+      const res = await postData<ApiResponse<Message>, ChatInput>(CHAT.send(sessionId), { message });
+      const aiMsg = unwrap<Message>(res);
+      if (aiMsg) {
+        set((s) => ({
+          chatMessages: [...s.chatMessages, aiMsg],
+          isSendingChat: false,
+        }));
+        return aiMsg;
+      }
+      set({ isSendingChat: false });
+      return null;
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "data" in err
+        ? (err as { data?: { message?: string } }).data?.message
+        : null;
+      set({ isSendingChat: false, chatError: msg ?? "Failed to send message" });
       return null;
     }
   },

@@ -236,7 +236,7 @@ export function parseMarkdown(content: string): MarkdownNode[] {
   return result;
 }
 
-function parseInlineMarkdown(
+export function parseInlineMarkdown(
   text: string,
   keyPrefix: string
 ): React.ReactNode[] {

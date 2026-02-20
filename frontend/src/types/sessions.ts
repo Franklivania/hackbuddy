@@ -6,6 +6,10 @@ export interface CreateSessionInput {
   name: string
 }
 
+export interface UpdateSessionInput {
+  name: string
+}
+
 export interface Session {
   id: string
   user_id: string
