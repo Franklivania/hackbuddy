@@ -75,6 +75,104 @@ func (h *Handler) GetAnalyses(c *gin.Context) {
 	response.Success(c, analyses, "All analyses retrieved")
 }
 
+// GetUsage godoc
+// @Summary List token usage (admin)
+// @Description Returns token usage rows. Optional query: user_id, session_id to filter.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param user_id query string false "Filter by user ID"
+// @Param session_id query string false "Filter by session ID"
+// @Success 200 {object} response.Response "Token usage array in data"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Admin required"
+// @Router /admin/usage [get]
+func (h *Handler) GetUsage(c *gin.Context) {
+	var userID, sessionID *string
+	if u := c.Query("user_id"); u != "" {
+		userID = &u
+	}
+	if s := c.Query("session_id"); s != "" {
+		sessionID = &s
+	}
+	list, err := h.service.GetTokenUsage(userID, sessionID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, list, "Usage retrieved")
+}
+
+// GetUsageSummary godoc
+// @Summary Token usage summary by user/session/model (admin)
+// @Description Returns aggregated token usage for gauging and manual model switching.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response "Usage summary array in data"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Admin required"
+// @Router /admin/usage/summary [get]
+func (h *Handler) GetUsageSummary(c *gin.Context) {
+	summary, err := h.service.GetUsageSummary()
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, summary, "Usage summary retrieved")
+}
+
+// GetModel godoc
+// @Summary Get active LLM model and available models (admin)
+// @Description Returns current active model (from override or config) and list of available model IDs.
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response "active, available in data"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Admin required"
+// @Router /admin/model [get]
+func (h *Handler) GetModel(c *gin.Context) {
+	active, _ := h.service.GetActiveModel()
+	response.Success(c, gin.H{
+		"active":    active,
+		"available": h.service.GetAvailableModels(),
+	}, "Model info retrieved")
+}
+
+// SetModelRequest is the body for PATCH /admin/model
+type SetModelRequest struct {
+	Model string `json:"model" binding:"required"`
+}
+
+// SetModel godoc
+// @Summary Set active LLM model (admin)
+// @Description Override the active model for all LLM calls. Use a value from GET /admin/model available list.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body SetModelRequest true "Model ID"
+// @Success 200 {object} response.Response "active model in data"
+// @Failure 400 {object} response.Response "Invalid body"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Admin required"
+// @Router /admin/model [patch]
+func (h *Handler) SetModel(c *gin.Context) {
+	var req SetModelRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "model is required")
+		return
+	}
+	if err := h.service.SetActiveModel(req.Model); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, gin.H{"active": req.Model}, "Model updated")
+}
+
 // UpdateRoleRequest is the body for PATCH /admin/role/:user_id
 type UpdateRoleRequest struct {
 	Role string `json:"role" binding:"required,oneof=user admin"`

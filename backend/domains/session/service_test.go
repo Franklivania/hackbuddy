@@ -16,6 +16,11 @@ func (m *MockRepository) Create(session *Session) error {
 	return args.Error(0)
 }
 
+func (m *MockRepository) Update(session *Session) error {
+	args := m.Called(session)
+	return args.Error(0)
+}
+
 func (m *MockRepository) FindByID(id string, userID string) (*Session, error) {
 	args := m.Called(id, userID)
 	if args.Get(0) == nil {

@@ -34,10 +34,17 @@ func (s *CollyScraper) Scrape(rawURL string) (string, error) {
 	}
 
 	c := colly.NewCollector()
+	c.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 	if len(s.allowedDomains) > 0 {
 		c.AllowedDomains = s.allowedDomains
 	}
 	c.SetRequestTimeout(30 * time.Second)
+
+	c.OnRequest(func(r *colly.Request) {
+		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		r.Headers.Set("Accept-Language", "en-US,en;q=0.5")
+		r.Headers.Set("Connection", "keep-alive")
+	})
 
 	var sb strings.Builder
 	c.OnHTML("body", func(e *colly.HTMLElement) {

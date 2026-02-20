@@ -64,6 +64,98 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/model": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns current active model (from override or config) and list of available model IDs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get active LLM model and available models (admin)",
+                "responses": {
+                    "200": {
+                        "description": "active, available in data",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Admin required",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Override the active model for all LLM calls. Use a value from GET /admin/model available list.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Set active LLM model (admin)",
+                "parameters": [
+                    {
+                        "description": "Model ID",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domains_admin.SetModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "active model in data",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Admin required",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/role/{user_id}": {
             "patch": {
                 "security": [
@@ -155,6 +247,100 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "Sessions array in data",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Admin required",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/usage": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns token usage rows. Optional query: user_id, session_id to filter.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List token usage (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by session ID",
+                        "name": "session_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token usage array in data",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Admin required",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/usage/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns aggregated token usage for gauging and manual model switching.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Token usage summary by user/session/model (admin)",
+                "responses": {
+                    "200": {
+                        "description": "Usage summary array in data",
                         "schema": {
                             "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
                         }
@@ -790,6 +976,68 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update session name. Must belong to the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Update a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Name to set",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domains_session.PatchSessionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated session in data",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
             }
         },
         "/sessions/{id}/analyses": {
@@ -822,6 +1070,55 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "Analyses array in data",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{id}/analysis/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns latest analysis, default directive, and custom directives for the session.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analysis"
+                ],
+                "summary": "Get analysis summary with directive for a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "AnalysisSummary in data (latest_analysis, default_directive, custom_directives)",
                         "schema": {
                             "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
                         }
@@ -905,6 +1202,56 @@ const docTemplate = `{
             }
         },
         "/sessions/{id}/chat": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all chat messages (user and assistant) for the session, ordered by creation time.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Get chat history for a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Messages array in data",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -949,6 +1296,55 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Validation or guardrail",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found",
+                        "schema": {
+                            "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{id}/chunks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all chunks (with content and summary) for the session, used for analysis context.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sources"
+                ],
+                "summary": "List chunks for a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Chunks array in data",
                         "schema": {
                             "$ref": "#/definitions/hackbuddy-backend_pkg_response.Response"
                         }
@@ -1204,6 +1600,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domains_admin.SetModelRequest": {
+            "type": "object",
+            "required": [
+                "model"
+            ],
+            "properties": {
+                "model": {
+                    "type": "string"
+                }
+            }
+        },
         "domains_admin.UpdateRoleRequest": {
             "type": "object",
             "required": [
@@ -1313,6 +1720,15 @@ const docTemplate = `{
                 }
             }
         },
+        "domains_session.PatchSessionInput": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
         "domains_source.AddSourcesInput": {
             "type": "object",
             "properties": {
@@ -1358,7 +1774,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "https://hackbuddy-im66.onrender.com",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Hackathon Intelligence Platform API",

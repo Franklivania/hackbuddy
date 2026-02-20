@@ -18,7 +18,9 @@ import (
 	"hackbuddy-backend/domains/chat"
 	"hackbuddy-backend/domains/session"
 	"hackbuddy-backend/domains/source"
+	"hackbuddy-backend/domains/usage"
 	"hackbuddy-backend/domains/user"
+	"hackbuddy-backend/infrastructure/llm"
 	"hackbuddy-backend/middlewares"
 	"hackbuddy-backend/pkg/logger"
 	"hackbuddy-backend/pkg/validator"
@@ -152,9 +154,15 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		auth.RegisterRoutes(api, cfg, authRepo, authMiddleware)
 		user.RegisterRoutes(api, cfg, authMiddleware)
 		session.RegisterRoutes(api, cfg, authMiddleware)
-		source.RegisterRoutes(api, cfg, authMiddleware)
-		analysis.RegisterRoutes(api, cfg, authMiddleware)
-		chat.RegisterRoutes(api, cfg, authMiddleware)
+		modelResolver := llm.NewModelResolver(func() string {
+			v, _ := db.GetSetting(llm.SettingKeyActiveModel)
+			return v
+		}, cfg.GroqModel)
+		usageRepo := usage.NewRepository()
+		usageRecorder := usage.NewRecorder(usageRepo)
+		source.RegisterRoutes(api, cfg, authMiddleware, modelResolver)
+		analysis.RegisterRoutes(api, cfg, authMiddleware, modelResolver, usageRecorder)
+		chat.RegisterRoutes(api, cfg, authMiddleware, modelResolver, usageRecorder)
 		admin.RegisterRoutes(api, cfg, authMiddleware)
 	}
 
@@ -184,6 +192,63 @@ func runMigrations() {
 			Version: 2,
 			Run: func() error {
 				return db.DB.AutoMigrate(&auth.RevokedToken{})
+			},
+		},
+		{
+			Version: 3,
+			Run: func() error {
+				return db.DB.AutoMigrate(&db.Setting{})
+			},
+		},
+		{
+			Version: 4,
+			Run: func() error {
+				return db.DB.AutoMigrate(&usage.TokenUsage{})
+			},
+		},
+		{
+			Version: 5,
+			Run: func() error {
+				return db.DB.AutoMigrate(&source.SessionChunk{})
+			},
+		},
+		{
+			Version: 6,
+			Run: func() error {
+				// Remove duplicate sources and their orphaned documents/chunks.
+				// Keeps the earliest source per (session_id, url).
+				db.DB.Exec(`
+					DELETE FROM session_chunks WHERE doc_id IN (
+						SELECT sd.id FROM session_documents sd
+						JOIN (
+							SELECT id FROM (
+								SELECT id, ROW_NUMBER() OVER (
+									PARTITION BY session_id, url ORDER BY created_at
+								) AS rn FROM sources WHERE deleted_at IS NULL
+							) t WHERE rn > 1
+						) dup ON sd.source_id = dup.id
+					)`)
+				db.DB.Exec(`
+					DELETE FROM session_documents WHERE source_id IN (
+						SELECT id FROM (
+							SELECT id, ROW_NUMBER() OVER (
+								PARTITION BY session_id, url ORDER BY created_at
+							) AS rn FROM sources WHERE deleted_at IS NULL
+						) t WHERE rn > 1
+					)`)
+				db.DB.Exec(`
+					DELETE FROM sources WHERE id IN (
+						SELECT id FROM (
+							SELECT id, ROW_NUMBER() OVER (
+								PARTITION BY session_id, url ORDER BY created_at
+							) AS rn FROM sources WHERE deleted_at IS NULL
+						) t WHERE rn > 1
+					)`)
+				return db.DB.Exec(`
+					CREATE UNIQUE INDEX IF NOT EXISTS idx_source_session_url
+					ON sources (session_id, url)
+					WHERE deleted_at IS NULL
+				`).Error
 			},
 		},
 	})

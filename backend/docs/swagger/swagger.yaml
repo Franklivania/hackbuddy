@@ -1,5 +1,12 @@
 basePath: /api/v1
 definitions:
+  domains_admin.SetModelRequest:
+    properties:
+      model:
+        type: string
+    required:
+    - model
+    type: object
   domains_admin.UpdateRoleRequest:
     properties:
       role:
@@ -72,6 +79,12 @@ definitions:
     required:
     - name
     type: object
+  domains_session.PatchSessionInput:
+    properties:
+      name:
+        minLength: 1
+        type: string
+    type: object
   domains_source.AddSourcesInput:
     properties:
       links:
@@ -93,7 +106,7 @@ definitions:
       success:
         type: boolean
     type: object
-host: localhost:8080
+host: https://hackbuddy-im66.onrender.com
 info:
   contact:
     email: support@swagger.io
@@ -130,6 +143,66 @@ paths:
       security:
       - BearerAuth: []
       summary: List all analyses (admin)
+      tags:
+      - admin
+  /admin/model:
+    get:
+      description: Returns current active model (from override or config) and list
+        of available model IDs.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: active, available in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get active LLM model and available models (admin)
+      tags:
+      - admin
+    patch:
+      consumes:
+      - application/json
+      description: Override the active model for all LLM calls. Use a value from GET
+        /admin/model available list.
+      parameters:
+      - description: Model ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domains_admin.SetModelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: active model in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Invalid body
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Set active LLM model (admin)
       tags:
       - admin
   /admin/role/{user_id}:
@@ -200,6 +273,66 @@ paths:
       security:
       - BearerAuth: []
       summary: List all sessions (admin)
+      tags:
+      - admin
+  /admin/usage:
+    get:
+      consumes:
+      - application/json
+      description: 'Returns token usage rows. Optional query: user_id, session_id
+        to filter.'
+      parameters:
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: string
+      - description: Filter by session ID
+        in: query
+        name: session_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token usage array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List token usage (admin)
+      tags:
+      - admin
+  /admin/usage/summary:
+    get:
+      consumes:
+      - application/json
+      description: Returns aggregated token usage for gauging and manual model switching.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Usage summary array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "403":
+          description: Admin required
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Token usage summary by user/session/model (admin)
       tags:
       - admin
   /admin/user/{user_id}/delete:
@@ -609,6 +742,46 @@ paths:
       summary: Get a session
       tags:
       - sessions
+    patch:
+      consumes:
+      - application/json
+      description: Update session name. Must belong to the authenticated user.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Name to set
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domains_session.PatchSessionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated session in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Update a session
+      tags:
+      - sessions
   /sessions/{id}/analyses:
     get:
       consumes:
@@ -638,6 +811,39 @@ paths:
       security:
       - BearerAuth: []
       summary: List analyses for a session
+      tags:
+      - analysis
+  /sessions/{id}/analysis/summary:
+    get:
+      consumes:
+      - application/json
+      description: Returns latest analysis, default directive, and custom directives
+        for the session.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: AnalysisSummary in data (latest_analysis, default_directive,
+            custom_directives)
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get analysis summary with directive for a session
       tags:
       - analysis
   /sessions/{id}/analyze:
@@ -683,6 +889,39 @@ paths:
       tags:
       - analysis
   /sessions/{id}/chat:
+    get:
+      description: Returns all chat messages (user and assistant) for the session,
+        ordered by creation time.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Messages array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "500":
+          description: Internal error
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get chat history for a session
+      tags:
+      - chat
     post:
       consumes:
       - application/json
@@ -724,6 +963,38 @@ paths:
       summary: Send a chat message
       tags:
       - chat
+  /sessions/{id}/chunks:
+    get:
+      consumes:
+      - application/json
+      description: Returns all chunks (with content and summary) for the session,
+        used for analysis context.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chunks array in data
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/hackbuddy-backend_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List chunks for a session
+      tags:
+      - sources
   /sessions/{id}/sources:
     get:
       consumes:

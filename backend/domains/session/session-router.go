@@ -17,6 +17,7 @@ func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.Handle
 		sessionGroup.POST("", handler.Create)
 		sessionGroup.GET("", handler.GetAll)
 		sessionGroup.GET("/:id", handler.GetOne)
+		sessionGroup.PATCH("/:id", handler.Patch)
 		sessionGroup.DELETE("/:id", handler.Delete)
 	}
 }

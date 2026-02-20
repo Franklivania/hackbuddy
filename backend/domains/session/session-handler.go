@@ -19,6 +19,10 @@ type CreateSessionInput struct {
 	Name string `json:"name" binding:"required"`
 }
 
+type PatchSessionInput struct {
+	Name string `json:"name" binding:"omitempty,min=1"`
+}
+
 // Create godoc
 // @Summary Create a session
 // @Description Create a new hackathon session for the authenticated user.
@@ -69,6 +73,42 @@ func (h *Handler) GetAll(c *gin.Context) {
 	}
 
 	response.Success(c, sessions, "Sessions retrieved")
+}
+
+// Patch godoc
+// @Summary Update a session
+// @Description Update session name. Must belong to the authenticated user.
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Session ID"
+// @Param input body PatchSessionInput true "Name to set"
+// @Success 200 {object} response.Response "Updated session in data"
+// @Failure 400 {object} response.Response "Validation error"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 404 {object} response.Response "Session not found"
+// @Router /sessions/{id} [patch]
+func (h *Handler) Patch(c *gin.Context) {
+	userID := c.MustGet("user_id").(string)
+	sessionID := c.Param("id")
+
+	var input PatchSessionInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		response.BindValidationError(c, err)
+		return
+	}
+	if input.Name == "" {
+		response.Error(c, http.StatusBadRequest, "name is required")
+		return
+	}
+
+	session, err := h.service.UpdateSession(sessionID, userID, input.Name)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Session not found")
+		return
+	}
+	response.Success(c, session, "Session updated")
 }
 
 // GetOne godoc

@@ -29,8 +29,9 @@ type SessionChunk struct {
 	ID         string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	SessionID  string    `gorm:"index;not null" json:"session_id"`
 	DocID      string    `gorm:"index;not null" json:"doc_id"`
-	Content    string    `gorm:"type:text" json:"content"` // The actual chunk
-	Summary    string    `gorm:"type:text" json:"summary"` // Summary for retrieval
+	SourceType string    `gorm:"not null;default:'winner'" json:"source_type"` // "winner" or "subject"
+	Content    string    `gorm:"type:text" json:"content"`
+	Summary    string    `gorm:"type:text" json:"summary"` // Structured JSON extraction
 	TokenCount int       `json:"token_count"`
 	CreatedAt  time.Time `json:"created_at"`
 }

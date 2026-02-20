@@ -36,11 +36,12 @@ type AnalyzeInput struct {
 // @Router /sessions/{id}/analyze [post]
 func (h *Handler) Analyze(c *gin.Context) {
 	sessionID := c.Param("id")
+	userID := c.MustGet("user_id").(string)
 
 	var input AnalyzeInput
 	_ = c.ShouldBindJSON(&input)
 
-	analysis, err := h.service.AnalyzeSession(sessionID, input.Directives)
+	analysis, err := h.service.AnalyzeSession(sessionID, userID, input.Directives)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -70,4 +71,26 @@ func (h *Handler) GetAnalyses(c *gin.Context) {
 	}
 
 	response.Success(c, analyses, "Analyses retrieved")
+}
+
+// GetAnalysisSummary godoc
+// @Summary Get analysis summary with directive for a session
+// @Description Returns latest analysis, default directive, and custom directives for the session.
+// @Tags analysis
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Session ID"
+// @Success 200 {object} response.Response "AnalysisSummary in data (latest_analysis, default_directive, custom_directives)"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 404 {object} response.Response "Session not found"
+// @Router /sessions/{id}/analysis/summary [get]
+func (h *Handler) GetAnalysisSummary(c *gin.Context) {
+	sessionID := c.Param("id")
+	summary, err := h.service.GetAnalysisSummary(sessionID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, summary, "Analysis summary retrieved")
 }

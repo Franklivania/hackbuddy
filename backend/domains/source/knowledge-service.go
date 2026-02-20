@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"hackbuddy-backend/infrastructure/llm"
 	"time"
+	"unicode/utf8"
 )
 
+const maxContentChars = 24000
+
 type KnowledgeService interface {
-	ProcessDocument(doc *SessionDocument) error
+	ProcessDocument(doc *SessionDocument, sourceType string) error
 }
 
 type knowledgeService struct {
@@ -22,59 +25,103 @@ func NewKnowledgeService(repo Repository, llmClient llm.LLMClient) KnowledgeServ
 	}
 }
 
-func (k *knowledgeService) ProcessDocument(doc *SessionDocument) error {
-	// 1. Chunk
-	chunks := chunkContent(doc.ContentClean, 1000) // 1000 char tokens approx
+func (k *knowledgeService) ProcessDocument(doc *SessionDocument, sourceType string) error {
+	content := truncateToRunes(doc.ContentClean, maxContentChars)
 
-	for _, content := range chunks {
-		// 2. Summarize (Index) each chunk
-		summary, err := k.summarizeChunk(content)
-		if err != nil {
-			// Log error but maybe continue? For strictness we fail.
-			return err
-		}
+	var extraction string
+	var err error
 
-		chunk := &SessionChunk{
-			SessionID:  doc.SessionID,
-			DocID:      doc.ID,
-			Content:    content,
-			Summary:    summary,
-			TokenCount: len(content) / 4, // Rough est
-			CreatedAt:  time.Now(),
-		}
-
-		// 3. Store
-		if err := k.repo.CreateChunk(chunk); err != nil {
-			return err
-		}
+	switch sourceType {
+	case TypeSubject:
+		extraction, err = k.extractHackathonProfile(content)
+	default:
+		extraction, err = k.extractWinnerIntelligence(content)
+	}
+	if err != nil {
+		return err
 	}
 
-	return nil
+	chunk := &SessionChunk{
+		SessionID:  doc.SessionID,
+		DocID:      doc.ID,
+		SourceType: sourceType,
+		Content:    content,
+		Summary:    extraction,
+		TokenCount: utf8.RuneCountInString(content) / 4,
+		CreatedAt:  time.Now(),
+	}
+	return k.repo.CreateChunk(chunk)
 }
 
-func (k *knowledgeService) summarizeChunk(content string) (string, error) {
-	prompt := fmt.Sprintf("Summarize the following content concisely for retrieval purposes. Focus on facts and key details:\n\n%s", content)
+func (k *knowledgeService) extractWinnerIntelligence(content string) (string, error) {
+	system := `You extract structured intelligence from hackathon winning projects. Output ONLY valid JSON. No preamble, no markdown fences, no commentary.`
+
+	prompt := fmt.Sprintf(`Analyze this hackathon winner content and extract structured intelligence.
+
+Content:
+%s
+
+Return ONLY this JSON structure (fill every field, use "Unknown" for unavailable data):
+{
+  "hackathon_name": "",
+  "project_name": "",
+  "track_or_category": "",
+  "tech_stack": [],
+  "problem_solved": "",
+  "winning_strategies": [],
+  "demo_tactics": "",
+  "differentiators": [],
+  "reason_won": ""
+}`, content)
 
 	messages := []llm.Message{
-		{Role: "system", Content: "You are a helpful assistant that summarizes text."},
+		{Role: "system", Content: system},
 		{Role: "user", Content: prompt},
 	}
 
-	return k.llmClient.Chat(messages, false)
+	out, _, err := k.llmClient.Chat(messages, true)
+	return out, err
 }
 
-func chunkContent(content string, size int) []string {
-	// Simple chunking by size
-	// A proper implementation would split by paragraphs/sentences
-	var chunks []string
-	runes := []rune(content)
+func (k *knowledgeService) extractHackathonProfile(content string) (string, error) {
+	system := `You extract structured hackathon event profiles. Output ONLY valid JSON. No preamble, no markdown fences, no commentary.`
 
-	for i := 0; i < len(runes); i += size {
-		end := i + size
-		if end > len(runes) {
-			end = len(runes)
-		}
-		chunks = append(chunks, string(runes[i:end]))
+	prompt := fmt.Sprintf(`Analyze this hackathon event page and extract the event profile.
+
+Content:
+%s
+
+Return ONLY this JSON structure (fill every field, use empty arrays/strings for unavailable data):
+{
+  "event_name": "",
+  "dates": "",
+  "duration": "",
+  "tracks": [],
+  "judging_criteria": [],
+  "themes": [],
+  "prizes": [],
+  "sponsor_technologies": [],
+  "constraints": [],
+  "inferred_biases": [],
+  "ecosystem_summary": ""
+}`, content)
+
+	messages := []llm.Message{
+		{Role: "system", Content: system},
+		{Role: "user", Content: prompt},
 	}
-	return chunks
+
+	out, _, err := k.llmClient.Chat(messages, true)
+	return out, err
+}
+
+func truncateToRunes(s string, maxRunes int) string {
+	if maxRunes <= 0 {
+		return s
+	}
+	r := []rune(s)
+	if len(r) <= maxRunes {
+		return s
+	}
+	return string(r[:maxRunes])
 }

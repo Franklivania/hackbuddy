@@ -64,6 +64,11 @@ func (h *Handler) AddSource(c *gin.Context) {
 		return
 	}
 	if len(sources) == 0 {
+		existing, err := h.service.GetSessionSources(sessionID)
+		if err == nil && len(existing) > 0 {
+			response.Success(c, existing, "All sources already exist for this session")
+			return
+		}
 		response.Error(c, http.StatusBadRequest, "provide at least one valid link in links or subject_link")
 		return
 	}
@@ -91,4 +96,26 @@ func (h *Handler) GetSources(c *gin.Context) {
 		return
 	}
 	response.Success(c, sources, "Sources retrieved")
+}
+
+// GetChunks godoc
+// @Summary List chunks for a session
+// @Description Returns all chunks (with content and summary) for the session, used for analysis context.
+// @Tags sources
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Session ID"
+// @Success 200 {object} response.Response "Chunks array in data"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 404 {object} response.Response "Session not found"
+// @Router /sessions/{id}/chunks [get]
+func (h *Handler) GetChunks(c *gin.Context) {
+	sessionID := c.Param("id")
+	chunks, err := h.service.GetSessionChunks(sessionID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, chunks, "Chunks retrieved")
 }

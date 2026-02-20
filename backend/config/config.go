@@ -18,6 +18,8 @@ type Config struct {
 	GithubClientID   string
 	GithubClientSecret string
 	GroqAPIKey       string
+	GroqModel        string // Model ID for LLM (env GROQ_MODEL); admin can override via DB
+	GroqMaxTokens    int    // Max tokens per completion for more elaborate responses (env GROQ_MAX_TOKENS)
 	SMTPServer       string
 	SMTPPort         int
 	SMTPUser         string
@@ -55,6 +57,8 @@ func LoadConfig() *Config {
 		GithubClientID:   getEnv("GITHUB_CLIENT_ID", ""),
 		GithubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 		GroqAPIKey:       getEnv("GROQ_API_KEY", ""),
+		GroqModel:        getEnv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+		GroqMaxTokens:    getEnvAsInt("GROQ_MAX_TOKENS", 8192),
 		SMTPServer:       getEnv("SMTP_SERVER", "smtp.gmail.com"),
 		SMTPPort:         getEnvAsInt("SMTP_PORT", 587),
 		SMTPUser:         getEnv("SMTP_USER", ""),

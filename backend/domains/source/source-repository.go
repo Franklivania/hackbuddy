@@ -1,8 +1,14 @@
 package source
 
 import (
+	"errors"
 	"hackbuddy-backend/db"
+	"strings"
 )
+
+// ErrDuplicateSource is returned when inserting a source whose (session_id, url)
+// already exists, caught via the DB unique constraint.
+var ErrDuplicateSource = errors.New("source URL already exists for this session")
 
 type Repository interface {
 	CreateSource(source *Source) error
@@ -23,7 +29,15 @@ func NewRepository() Repository {
 }
 
 func (r *repository) CreateSource(source *Source) error {
-	return db.DB.Create(source).Error
+	result := db.DB.Create(source)
+	if result.Error != nil {
+		if strings.Contains(result.Error.Error(), "duplicate key") ||
+			strings.Contains(result.Error.Error(), "SQLSTATE 23505") {
+			return ErrDuplicateSource
+		}
+		return result.Error
+	}
+	return nil
 }
 
 func (r *repository) FindSourcesBySession(sessionID string) ([]Source, error) {

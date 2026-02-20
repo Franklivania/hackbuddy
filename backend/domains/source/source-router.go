@@ -11,10 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc) {
+func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc, modelResolver llm.ModelResolver) {
 	repo := NewRepository()
-	// Shared clients
-	llmClient := llm.NewGroqClient(cfg)
+	llmClient := llm.NewGroqClient(cfg, modelResolver)
 	allowedDomains := parseAllowedScrapeDomains(cfg.AllowedScrapeDomains)
 	scraperService := scraper.NewCollyScraper(allowedDomains)
 
@@ -27,6 +26,7 @@ func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.Handle
 	{
 		sessionGroup.POST("/sources", handler.AddSource)
 		sessionGroup.GET("/sources", handler.GetSources)
+		sessionGroup.GET("/chunks", handler.GetChunks)
 	}
 }
 

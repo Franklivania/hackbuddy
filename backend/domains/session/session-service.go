@@ -6,6 +6,7 @@ import (
 
 type Service interface {
 	CreateSession(userID string, name string) (*Session, error)
+	UpdateSession(id string, userID string, name string) (*Session, error)
 	GetSession(id string, userID string) (*Session, error)
 	GetUserSessions(userID string) ([]Session, error)
 	DeleteSession(id string, userID string) error
@@ -28,6 +29,18 @@ func (s *service) CreateSession(userID string, name string) (*Session, error) {
 		return nil, err
 	}
 	return session, nil
+}
+
+func (s *service) UpdateSession(id string, userID string, name string) (*Session, error) {
+	sess, err := s.repo.FindByID(id, userID)
+	if err != nil {
+		return nil, err
+	}
+	sess.Name = name
+	if err := s.repo.Update(sess); err != nil {
+		return nil, err
+	}
+	return sess, nil
 }
 
 func (s *service) GetSession(id string, userID string) (*Session, error) {

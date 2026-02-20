@@ -8,6 +8,7 @@ import (
 
 type Repository interface {
 	Create(session *Session) error
+	Update(session *Session) error
 	FindByID(id string, userID string) (*Session, error)
 	FindAllByUser(userID string) ([]Session, error)
 	FindAll() ([]Session, error) // for admin
@@ -23,6 +24,10 @@ func NewRepository() Repository {
 
 func (r *repository) Create(session *Session) error {
 	return db.DB.Create(session).Error
+}
+
+func (r *repository) Update(session *Session) error {
+	return db.DB.Save(session).Error
 }
 
 func (r *repository) FindByID(id string, userID string) (*Session, error) {

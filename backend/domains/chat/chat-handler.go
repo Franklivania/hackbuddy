@@ -35,13 +35,14 @@ type ChatInput struct {
 // @Router /sessions/{id}/chat [post]
 func (h *Handler) Chat(c *gin.Context) {
 	sessionID := c.Param("id")
+	userID := c.MustGet("user_id").(string)
 	var input ChatInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		response.BindValidationError(c, err)
 		return
 	}
 
-	msg, err := h.service.SendMessage(sessionID, input.Message)
+	msg, err := h.service.SendMessage(sessionID, userID, input.Message)
 	if err != nil {
 		// handle guardrail error specially if needed
 		response.Error(c, http.StatusBadRequest, err.Error())
@@ -49,4 +50,26 @@ func (h *Handler) Chat(c *gin.Context) {
 	}
 
 	response.Success(c, msg, "Message sent")
+}
+
+// GetHistory godoc
+// @Summary Get chat history for a session
+// @Description Returns all chat messages (user and assistant) for the session, ordered by creation time.
+// @Tags chat
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Session ID"
+// @Success 200 {object} response.Response "Messages array in data"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 404 {object} response.Response "Session not found"
+// @Failure 500 {object} response.Response "Internal error"
+// @Router /sessions/{id}/chat [get]
+func (h *Handler) GetHistory(c *gin.Context) {
+	sessionID := c.Param("id")
+	messages, err := h.service.GetHistory(sessionID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, messages, "Chat history retrieved")
 }

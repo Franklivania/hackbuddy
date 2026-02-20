@@ -4,18 +4,19 @@ import (
 	"hackbuddy-backend/config"
 	"hackbuddy-backend/domains/session"
 	"hackbuddy-backend/domains/source"
+	"hackbuddy-backend/domains/usage"
 	"hackbuddy-backend/infrastructure/llm"
 	"hackbuddy-backend/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc) {
+func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.HandlerFunc, modelResolver llm.ModelResolver, usageRecorder *usage.Recorder) {
 	repo := NewRepository()
 	sourceRepo := source.NewRepository()
-	llmClient := llm.NewGroqClient(cfg)
+	llmClient := llm.NewGroqClient(cfg, modelResolver)
 
-	service := NewService(repo, sourceRepo, llmClient)
+	service := NewService(repo, sourceRepo, llmClient, usageRecorder, modelResolver)
 	handler := NewHandler(service)
 
 	sessionGroup := r.Group("/sessions/:id")
@@ -23,5 +24,6 @@ func RegisterRoutes(r gin.IRouter, cfg *config.Config, authMiddleware gin.Handle
 	{
 		sessionGroup.POST("/analyze", handler.Analyze)
 		sessionGroup.GET("/analyses", handler.GetAnalyses)
+		sessionGroup.GET("/analysis/summary", handler.GetAnalysisSummary)
 	}
 }
