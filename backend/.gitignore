@@ -27,3 +27,4 @@ coverage.html
 # OS
 .DS_Store
 Thumbs.db
+SECURITY_SWEEP_REPORT.md
