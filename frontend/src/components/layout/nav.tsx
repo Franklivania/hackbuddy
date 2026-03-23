@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/stores/auth-store";
+import { Button } from "../ui/button";
+import { Star } from "lucide-react";
 
 const LOGO_LABEL = "HackBuddy";
 const CTA_LABEL = "Start Your Session";
@@ -37,15 +39,23 @@ export function Nav() {
           </li>
         ))}
       </ul>
-      {user ? (
-        <Link to="/dashboard" className="landing-btn-primary">
-          {DASHBOARD_LABEL}
+      <aside className="flex items-center gap-2">
+        <Link to="https://github.com/Franklivania/hackbuddy" target="_blank">
+          <Button>
+            <Star size={18} />
+            Star on GitHub
+          </Button>
         </Link>
-      ) : (
-        <Link to="/auth" className="landing-btn-primary">
-          {CTA_LABEL}
-        </Link>
-      )}
+        {user ? (
+          <Link to="/dashboard" className="landing-btn-primary">
+            {DASHBOARD_LABEL}
+          </Link>
+        ) : (
+          <Link to="/auth" className="landing-btn-primary">
+            {CTA_LABEL}
+          </Link>
+        )}
+      </aside>
     </nav>
   );
 }
