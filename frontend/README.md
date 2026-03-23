@@ -1,87 +1,96 @@
-# Welcome to React Router!
+# HackBuddy Frontend
 
-A modern, production-ready template for building full-stack React applications using React Router.
+![React Router](https://img.shields.io/badge/React_Router-7.x-CA4245?logo=reactrouter)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?logo=tailwindcss)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+Frontend application for HackBuddy, built with React Router 7, TypeScript, Tailwind CSS, Zustand, and TanStack Query.
 
-## Features
+## What This App Covers
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- Public landing experience
+- Authentication flows (email/password + OAuth callback handling)
+- User dashboard for sessions, sources, analysis, and chat
+- Admin views for usage, users, sessions, and model controls
 
-## Getting Started
+## Tech Stack
 
-### Installation
+- React 19 + React Router 7
+- TypeScript + Vite 7
+- Tailwind CSS 4 + shadcn/ui components
+- Zustand (client state)
+- TanStack Query (server state)
 
-Install the dependencies:
+## Prerequisites
+
+- Bun (recommended) or npm
+- Backend API running (default expected: `http://localhost:8080/api/v1`)
+
+## Environment Setup
+
+Create `frontend/.env.local`:
+
+```bash
+VITE_API_URL=http://localhost:8080/api/v1
+```
+
+`VITE_API_URL` is used as the base URL for all API requests.
+
+## Local Development
+
+```bash
+cd frontend
+bun install
+bun run dev
+```
+
+App runs at `http://localhost:5173`.
+
+If you prefer npm:
 
 ```bash
 npm install
-```
-
-### Development
-
-Start the development server with HMR:
-
-```bash
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
-
-## Building for Production
-
-Create a production build:
+## Scripts
 
 ```bash
-npm run build
+bun run dev        # start dev server
+bun run typecheck  # router typegen + tsc
+bun run build      # production build
+bun run start      # serve build/server/index.js
 ```
 
-## Deployment
+Equivalent npm scripts exist (`npm run dev`, `npm run build`, etc.).
 
-### Docker Deployment
+## Build Output
 
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
+```text
+build/
+  client/   # static client assets
+  server/   # server bundle (react-router-serve target)
 ```
 
-The containerized application can be deployed to any platform that supports Docker, including:
+## API Integration
 
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
+- Base path expected by frontend: `/api/v1`
+- Auth uses `Authorization: Bearer <token>` when token cookie exists
+- Full endpoint matrix and payload contracts: `frontend/integration-docs.md`
 
-### DIY Deployment
+## Docker Note
 
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
+`frontend/Dockerfile` currently expects `package-lock.json` and uses `npm ci`.
+If you standardize on Bun-only workflows, update Docker packaging accordingly.
 
-Make sure to deploy the output of `npm run build`
+## Contributing (Internal)
 
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
+- Branch from `dev` with `feature/*`, `fix/*`, or `chore/*`
+- Open PRs to `dev` for regular changes
+- Keep `main` for release/hotfix promotion PRs
+- Ensure Frontend CI is passing before merge
 
-## Styling
+## License
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+This project is proprietary and confidential. It is not open source and not MIT licensed.
